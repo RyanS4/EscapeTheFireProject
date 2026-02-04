@@ -1,10 +1,12 @@
 import {View, Text, TextInput, Button, StyleSheet} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
+import { useAuth } from '../contexts/AuthContext';
 import React, {useState} from 'react';
 
 const DashboardAdmin = () => {
     
     const navigation = useNavigation();
+    const { signOut } = useAuth();
 
     function handleAlertInitiation() {
         // Handle alert initiation logic here
@@ -16,10 +18,8 @@ const DashboardAdmin = () => {
         console.log('Viewing class roster');
     }  
 
-    function handleLogout() {
-        // Handle logout logic here
-        console.log('Logging out');
-        (navigation as any).replace('Login');
+    async function handleLogout() {
+        await signOut();
     }
 
     function handleCreateStaffAccount() {

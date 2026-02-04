@@ -1,13 +1,34 @@
 import {View, Text, TextInput, Button, StyleSheet} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import React, {useState} from 'react';
+import { createUserServer } from '../services/api';
 
 const CreateStaffAccount = () => {
 
     const navigation = useNavigation();
 
-    function handleCreateAccount() {
-        console.log("account made");
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    async function handleCreateAccount() {
+        setError('');
+        if (!email || !password) {
+            setError('Email and password are required');
+            return;
+        }
+        setLoading(true);
+        try {
+            await createUserServer({ email, password, roles: ['staff'] });
+            // on success, return to admin dashboard
+            (navigation as any).replace('DashboardAdmin');
+        } catch (e) {
+            console.error('Create account failed', e);
+            setError(e && e.message ? e.message : 'Create account failed');
+        } finally {
+            setLoading(false);
+        }
 
     }
 

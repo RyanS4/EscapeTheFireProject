@@ -1,26 +1,25 @@
 import {View, Text, TextInput, Button, StyleSheet, Image} from 'react-native';
 import React, {useState} from 'react';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
   const navigation = useNavigation();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const { signIn } = useAuth();
   const [error, setError] = useState('');
 
-  const handleLogin = () => {
-    // Handle login logic here
-    console.log('Logging in with', username, password);
-    if (username === '' || password === '') {
-        {console.log("Error");}
-        setError('Please enter both username and password.');
-    } else if (username === 'admin' && password == 'admin') {  // This is a temp check for a admin username and password (will be changed later)
-        setError('');
-        (navigation as any).replace('DashboardAdmin');
-    } else {
-        setError('');
-        (navigation as any).replace('DashboardStaff');
-    }
+  const handleLogin = async () => {
+  try {
+    setError('');
+    await signIn(email, password);
+  } catch (err) {
+    console.error('Login failed', err);
+    if (err && (err.status === 401 || err.status === 400)) setError('Invalid email or password');
+    else if (err && err.message) setError(`Login failed: ${err.message}`);
+    else setError('Login failed — check your connection or try again');
+  }
   };
 
   return (
@@ -28,9 +27,11 @@ const Login = () => {
       <Text style={styles.title}>Emergency Management</Text>
       <TextInput
         style={styles.input}
-        placeholder="Username"
-        value={username}
-        onChangeText={setUsername}
+        placeholder="Email"
+        autoCapitalize="none"
+        keyboardType="email-address"
+        value={email}
+        onChangeText={setEmail}
       />
       <TextInput
         style={styles.input}
