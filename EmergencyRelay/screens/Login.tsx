@@ -1,18 +1,21 @@
-import {View, Text, TextInput, Button, StyleSheet} from 'react-native';
+import {View, Text, TextInput, Button, StyleSheet, Image} from 'react-native';
 import React, {useState} from 'react';
+import { useNavigation } from '@react-navigation/native';
 
 const Login = () => {
+  const navigation = useNavigation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
   const handleLogin = () => {
     // Handle login logic here
     console.log('Logging in with', username, password);
+    (navigation as any).replace('DashboardStaff');
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+      <Text style={styles.title}>Emergency Management</Text>
       <TextInput
         style={styles.input}
         placeholder="Username"
@@ -27,6 +30,7 @@ const Login = () => {
         secureTextEntry
       />
       <Button title="Login" onPress={handleLogin} />
+      <Image style={styles.logo} source={require('../assets/BoysAndGirlsClubLogo.png')} />
     </View>
   );
 }
@@ -36,7 +40,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 16,
-    backgroundColor: '#7afa9aff',
+    backgroundColor: '#ffffffff',
   },
   title: {
     fontSize: 24,
@@ -50,6 +54,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingHorizontal: 8,
   },
+  logo: {
+    width: 300,
+    height: 300,
+    resizeMode: 'contain',
+    marginTop: 20,
+    alignSelf: 'center',
+  }
 });
+
 
 export default Login;
