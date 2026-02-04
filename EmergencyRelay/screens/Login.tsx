@@ -14,6 +14,9 @@ const Login = () => {
     if (username === '' || password === '') {
         {console.log("Error");}
         setError('Please enter both username and password.');
+    } else if (username === 'admin' && password == 'admin') {  // This is a temp check for a admin username and password (will be changed later)
+        setError('');
+        (navigation as any).replace('DashboardAdmin');
     } else {
         setError('');
         (navigation as any).replace('DashboardStaff');
@@ -37,8 +40,8 @@ const Login = () => {
         secureTextEntry
       />
       <Button title="Login" onPress={handleLogin} />
+      <Text style={styles.error}>{error}</Text>
       <Image style={styles.logo} source={require('../assets/BoysAndGirlsClubLogo.png')} />
-      <Text style={{color: 'red', marginTop: 10}}>{error}</Text>
     </View>
   );
 }
@@ -68,6 +71,10 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
     marginTop: 20,
     alignSelf: 'center',
+  },
+  error: {
+    color: 'red',
+    marginTop: 10,
   }
 });
 
