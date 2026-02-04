@@ -16,3 +16,11 @@ export function isAdmin(user: User) {
 export function isStaff(user: User) {
   return user.role === 'staff';
 }
+
+export default function createUser(id: string, name: string, role: UserRole): User {
+  return {
+    id,
+    name,
+    role
+  };
+}
