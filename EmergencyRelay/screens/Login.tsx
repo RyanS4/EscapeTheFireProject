@@ -6,11 +6,18 @@ const Login = () => {
   const navigation = useNavigation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
   const handleLogin = () => {
     // Handle login logic here
     console.log('Logging in with', username, password);
-    (navigation as any).replace('DashboardStaff');
+    if (username === '' || password === '') {
+        {console.log("Error");}
+        setError('Please enter both username and password.');
+    } else {
+        setError('');
+        (navigation as any).replace('DashboardStaff');
+    }
   };
 
   return (
@@ -31,6 +38,7 @@ const Login = () => {
       />
       <Button title="Login" onPress={handleLogin} />
       <Image style={styles.logo} source={require('../assets/BoysAndGirlsClubLogo.png')} />
+      <Text style={{color: 'red', marginTop: 10}}>{error}</Text>
     </View>
   );
 }
