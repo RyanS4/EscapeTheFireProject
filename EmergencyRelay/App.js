@@ -3,12 +3,13 @@ import Login from './screens/Login';
 import DashboardStaff from './screens/DashboardStaff';
 const Stack = createStackNavigator();
 import { NavigationContainer } from '@react-navigation/native';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 export default function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator>
+      <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Login" component={Login} />
         <Stack.Screen name="DashboardStaff" component={DashboardStaff} />
       </Stack.Navigator>
     </NavigationContainer>
