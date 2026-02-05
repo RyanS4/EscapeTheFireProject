@@ -72,9 +72,6 @@ To update the API base at runtime, your app exposes `configureApiBase(url)` thro
 const { configureApiBase } = useAuth();
 configureApiBase("http://10.0.2.2:5000");
 ```
-
-I can add a small settings screen that lets you toggle this without editing code — tell me if you want that.
-
 ## Create a new user (admin endpoint)
 
 You can create users from the command line (development only):
