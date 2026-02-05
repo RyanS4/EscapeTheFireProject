@@ -14,13 +14,37 @@ const CreateStaffAccount = () => {
 
     async function handleCreateAccount() {
         setError('');
+
         if (email.trim() === '' || password.trim() === '') {
             setError('Email and password are required');
             return;
         }
+
         setLoading(true);
         try {
             await createUserServer({ email, password, roles: ['staff'] });
+            // on success, return to admin dashboard
+            (navigation as any).replace('DashboardAdmin');
+        } catch (e) {
+            console.error('Create account failed', e);
+            setError(e && e.message ? e.message : 'Create account failed');
+        } finally {
+            setLoading(false);
+        }
+
+    }
+
+    async function handleCreateAdminAccount() {
+        setError('');
+
+        if (email.trim() === '' || password.trim() === '') {
+            setError('Email and password are required');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await createUserServer({ email, password, roles: ['admin'] });
             // on success, return to admin dashboard
             (navigation as any).replace('DashboardAdmin');
         } catch (e) {
@@ -45,7 +69,9 @@ const CreateStaffAccount = () => {
                 <View style={{height: 16}}/>
                 <Text style={styles.error}>{error}</Text>
                 <View style={{height: 16}}/>
-                <Button title="Create Account" onPress={handleCreateAccount} />
+                <Button title="Create Staff Account" onPress={handleCreateAccount} />
+                <View style={{height: 16}}/>
+                <Button title="Create Admin Account" onPress={handleCreateAdminAccount} />
                 <View style={{height: 16}}/>
                 <Button title="Cancel" onPress={handleCancel} />
             </View>

@@ -18,7 +18,7 @@
     ],
     "status": "active",
     "created_at": "2026-02-04T21:57:20.745Z",
-    "session": "96208d2d3250030872bd2ef48157269d52b1a7c9376675d9"
+    "session": "439ba99503c27689091222a86cf0c199d6a802d90129e34b"
   },
   {
     "id": "ml8l76i8a09yee",
@@ -40,6 +40,17 @@
     ],
     "status": "active",
     "created_at": "2026-02-05T17:51:01.296Z",
-    "session": "21f63d860a50adb4d6363297c59bb1502133e1db38d448a9"
+    "session": "4b88b3cfcd7f66ad6277283d8d758e548caa9031cdb32a74"
+  },
+  {
+    "id": "ml9rr0uouwbvjd",
+    "email": "b",
+    "password_hash": "53ee4a2e02d5e5139add20116f3a9752:4d6d1c6ea6f8d23576ec20c6e05442e7ae2ff5ef5b022fee61ea91d0d7f153bb52bd37d686cc336eaf39185ec75f286c92c5fb04d86665f8a1ac5c1f29b1d1c0",
+    "roles": [
+      "admin"
+    ],
+    "status": "active",
+    "created_at": "2026-02-05T18:07:25.268Z",
+    "session": "64c5ab36414954d42224ee4752edc6161fe30aa4bcbd1019"
   }
 ]
