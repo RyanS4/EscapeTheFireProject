@@ -2,10 +2,15 @@
 
 This README explains how to run the local backend and the Expo React Native app, how to test the login flow, and a few troubleshooting tips.
 
-## ID for testing:
+## ID for Staff testing:
 
-- Email: `staff2@example.com`
-- Password: `S3curePass!`
+- Email: `A`
+- Password: `A`
+  
+## ID for Admin testing:
+
+- Email: `B`
+- Password: `B`
 
 ---
 
