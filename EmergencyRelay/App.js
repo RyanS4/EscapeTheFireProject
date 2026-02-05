@@ -3,6 +3,7 @@ import Login from './screens/Login';
 import DashboardStaff from './screens/DashboardStaff';
 import DashboardAdmin from './screens/DashboardAdmin';
 import CreateStaffAccount from './screens/CreateStaffAccount';
+import DeleteStaffAccount from './screens/DeleteStaffAccount';
 const Stack = createStackNavigator();
 import { NavigationContainer } from '@react-navigation/native';
 import { StyleSheet } from 'react-native';
@@ -23,7 +24,8 @@ function RootNavigator() {
     return (
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="DashboardAdmin" component={DashboardAdmin} />
-        <Stack.Screen name="CreateStaffAccount" component={CreateStaffAccount} />
+  <Stack.Screen name="CreateStaffAccount" component={CreateStaffAccount} />
+  <Stack.Screen name="DeleteStaffAccount" component={DeleteStaffAccount} />
       </Stack.Navigator>
     );
   }

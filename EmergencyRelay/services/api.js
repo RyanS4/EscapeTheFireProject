@@ -73,6 +73,14 @@ export function setApiBaseUrl(url) {
   DEFAULT_BASE = url;
 }
 
+export function getAccessToken() {
+  return accessToken;
+}
+
+export function getApiBaseUrl() {
+  return DEFAULT_BASE;
+}
+
 export async function loginServer(email, password, baseUrl = DEFAULT_BASE) {
   const res = await fetch(`${baseUrl}/auth/login`, {
     method: 'POST',
@@ -121,4 +129,43 @@ export async function createUserServer({ email, password, roles = ['staff'] }, b
     throw err;
   }
   return res.json();
+}
+
+/**
+ * Admin: list users
+ */
+export async function getUsersServer(baseUrl = DEFAULT_BASE) {
+  if (!accessToken) throw new Error('no_token');
+  console.debug('[api] getUsersServer - token:', accessToken, 'baseUrl:', baseUrl);
+  const res = await fetch(`${baseUrl}/admin/users`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`Get users failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+/**
+ * Admin: delete a user by id
+ */
+export async function deleteUserServer(id, baseUrl = DEFAULT_BASE) {
+  if (!accessToken) throw new Error('no_token');
+  console.debug('[api] deleteUserServer - id:', id, 'token:', accessToken, 'baseUrl:', baseUrl);
+  const res = await fetch(`${baseUrl}/admin/users/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  console.debug('[api] deleteUserServer - response status:', res.status);
+  if (!res.ok && res.status !== 204) {
+    const txt = await res.text();
+    const err = new Error(`Delete user failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return true;
 }
