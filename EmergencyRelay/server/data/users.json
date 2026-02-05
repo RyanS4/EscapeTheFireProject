@@ -14,11 +14,11 @@
     "email": "staff2@example.com",
     "password_hash": "f248c25c3987d2a810742df060e7561e:47a340539b2489eb804881e14ed1c86386f3e9995d2484105fb28e3a4c9641a0a9d8e555cc82bbeb80d83646fcbd380da43d3cd408f11a60fedb6e0b1ec0a1dd",
     "roles": [
-      "staff"
+      "admin"
     ],
     "status": "active",
     "created_at": "2026-02-04T21:57:20.745Z",
-    "session": "0d907075e84f314758fd23baa76ac9b5539f54848d8a0c75"
+    "session": "96208d2d3250030872bd2ef48157269d52b1a7c9376675d9"
   },
   {
     "id": "ml8l76i8a09yee",
@@ -30,5 +30,16 @@
     "status": "active",
     "created_at": "2026-02-04T22:16:15.606Z",
     "session": "488886d32818d2aa7fadc2969d7759e44c03ab92bce050d1"
+  },
+  {
+    "id": "ml9r5xm6m6m6gc",
+    "email": "a",
+    "password_hash": "4089af73cabc6df5692b5569130007c1:18e0497e2ce13de66ffaa8d704bb02220d24a32e750d2794875524b488e3836381b7831afcc367c578052e5468f8f0f5e3bc60dd5cd1c36a17dfe085ddb0bbbe",
+    "roles": [
+      "staff"
+    ],
+    "status": "active",
+    "created_at": "2026-02-05T17:51:01.296Z",
+    "session": "21f63d860a50adb4d6363297c59bb1502133e1db38d448a9"
   }
 ]

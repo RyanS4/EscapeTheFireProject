@@ -14,7 +14,7 @@ const CreateStaffAccount = () => {
 
     async function handleCreateAccount() {
         setError('');
-        if (!email || !password) {
+        if (email.trim() === '' || password.trim() === '') {
             setError('Email and password are required');
             return;
         }
@@ -40,10 +40,10 @@ const CreateStaffAccount = () => {
         return (
             <View style={styles.container}>
                 <Text style={styles.title}>Create Staff Account</Text>
+                <TextInput style={styles.input} placeholder="Email" onChangeText={setEmail} />
+                <TextInput style={styles.input} placeholder="Password" secureTextEntry onChangeText={setPassword} />
                 <View style={{height: 16}}/>
-                <TextInput style={styles.input} placeholder="Username" />
-                <View style={{height: 16}}/>
-                <TextInput style={styles.input} placeholder="Password" secureTextEntry />
+                <Text style={styles.error}>{error}</Text>
                 <View style={{height: 16}}/>
                 <Button title="Create Account" onPress={handleCreateAccount} />
                 <View style={{height: 16}}/>
@@ -71,6 +71,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingHorizontal: 8,
         },
+    error: {
+        color: 'red',
+        textAlign: 'center',
+    },
     });
 
 export default CreateStaffAccount;
