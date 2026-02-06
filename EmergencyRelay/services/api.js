@@ -66,15 +66,46 @@ export async function fakeGetMe() {
 }
 
 // --- live server helpers ---
-// baseUrl default helps when running server locally; if using a device/emulator, replace with your machine IP or use Expo tunnel
-let DEFAULT_BASE = 'http://localhost:5000';
+// The API base can come from several places (in order):
+// 1) runtime call to setApiBaseUrl(url)
+// 2) Expo app config `extra.API_BASE` (available via expo-constants)
+// 3) if none of the above are set, callers will get a helpful error so tests don't silently call the wrong host.
+let DEFAULT_BASE = null;
+
+// try to read from Expo Constants (app.json/app.config.extra) when available
+try {
+  // require at runtime so this module can still be used in non-expo/test environments
+  const Constants = require('expo-constants');
+  if (Constants && Constants.manifest && Constants.manifest.extra && Constants.manifest.extra.API_BASE) {
+    DEFAULT_BASE = Constants.manifest.extra.API_BASE;
+  }
+} catch (e) {
+  // ignore if expo-constants isn't available (e.g., running tests)
+}
 
 export function setApiBaseUrl(url) {
   DEFAULT_BASE = url;
 }
 
-export async function loginServer(email, password, baseUrl = DEFAULT_BASE) {
-  const res = await fetch(`${baseUrl}/auth/login`, {
+export function getAccessToken() {
+  return accessToken;
+}
+
+export function getApiBaseUrl() {
+  return DEFAULT_BASE;
+}
+
+function getBase(override) {
+  const base = override || DEFAULT_BASE;
+  if (!base) {
+    throw new Error('API base URL not configured — call setApiBaseUrl(url) or set `extra.API_BASE` in app config');
+  }
+  return base.replace(/\/$/, '');
+}
+
+export async function loginServer(email, password, baseUrl) {
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
@@ -91,10 +122,11 @@ export async function loginServer(email, password, baseUrl = DEFAULT_BASE) {
   return data.user;
 }
 
-export async function getMeServer(baseUrl = DEFAULT_BASE) {
+export async function getMeServer(baseUrl) {
   // require accessToken to be set
   if (!accessToken) return null;
-  const res = await fetch(`${baseUrl}/auth/me`, {
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/auth/me`, {
     method: 'GET',
     headers: { Authorization: `Bearer ${accessToken}` },
   });
@@ -108,8 +140,9 @@ export async function getMeServer(baseUrl = DEFAULT_BASE) {
  * Admin helper to create a new user on the server (development convenience).
  * body: { email, password, roles }
  */
-export async function createUserServer({ email, password, roles = ['staff'] }, baseUrl = DEFAULT_BASE) {
-  const res = await fetch(`${baseUrl}/admin/users/create`, {
+export async function createUserServer({ email, password, roles = ['staff'] }, baseUrl) {
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/admin/users/create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, roles }),
@@ -121,4 +154,42 @@ export async function createUserServer({ email, password, roles = ['staff'] }, b
     throw err;
   }
   return res.json();
+}
+
+/**
+ * Admin: list users
+ */
+export async function getUsersServer(baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/admin/users`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`Get users failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+/**
+ * Admin: delete a user by id
+ */
+export async function deleteUserServer(id, baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/admin/users/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok && res.status !== 204) {
+    const txt = await res.text();
+    const err = new Error(`Delete user failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return true;
 }

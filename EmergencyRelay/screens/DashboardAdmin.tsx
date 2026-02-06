@@ -25,7 +25,13 @@ const DashboardAdmin = () => {
     function handleCreateStaffAccount() {
         // Handle create staff account logic here
         console.log('Creating new staff account');
-        (navigation as any).replace('CreateStaffAccount');
+        (navigation as any).navigate('CreateStaffAccount');
+    }
+
+    function handleDeleteStaffAccount() {
+        // Handle delete staff account logic here
+        console.log('Deleting staff account');
+        (navigation as any).navigate('DeleteStaffAccount');
     }
 
     return (
@@ -37,6 +43,8 @@ const DashboardAdmin = () => {
             <Button title="Logout" onPress={handleLogout} />
             <View style={{ height: 16 }} />
             <Button title="Create New Staff Account" onPress={handleCreateStaffAccount} />
+            <View style={{ height: 16 }} />
+            <Button title="Delete Staff Account" onPress={handleDeleteStaffAccount} />
         </View>
     );
 }
