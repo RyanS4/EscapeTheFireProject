@@ -1,6 +1,7 @@
 // contexts/AuthContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { fakeLogin, fakeGetMe, loginServer, getMeServer, clearTokens, setTokens, setApiBaseUrl } from '../services/api';
+import { fakeLogin, fakeGetMe, loginServer, getMeServer, clearTokens, setTokens, setApiBaseUrl, getAccessToken, getApiBaseUrl } from '../services/api';
+import { Platform } from 'react-native';
 
 const AuthContext = createContext(null);
 
@@ -15,6 +16,18 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let mounted = true;
     async function init() {
+      // Auto-configure a sensible API base for local development when none is set.
+      // - Android emulator: use 10.0.2.2 to reach host machine
+      // - iOS simulator / web: use localhost
+      try {
+        if (!getApiBaseUrl()) {
+          const defaultDevBase = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
+          console.info('[Auth] setting default API base to', defaultDevBase);
+          setApiBaseUrl(defaultDevBase);
+        }
+      } catch (e) {
+        // ignore
+      }
       try {
         // try server first
         let me = null;
@@ -79,7 +92,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut, isAdmin, configureApiBase }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signOut, isAdmin, configureApiBase, getAccessToken }}>
       {children}
     </AuthContext.Provider>
   );

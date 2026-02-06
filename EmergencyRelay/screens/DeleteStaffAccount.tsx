@@ -1,31 +1,52 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, FlatList, StyleSheet, Alert } from 'react-native';
+import { View, Text, Button, FlatList, StyleSheet, Alert, Modal } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
-import { getUsersServer, deleteUserServer, getAccessToken, setApiBaseUrl, getApiBaseUrl } from '../services/api';
+import { getUsersServer, deleteUserServer, setApiBaseUrl, getApiBaseUrl } from '../services/api';
 import { useNavigation } from '@react-navigation/native';
 
 export default function DeleteStaffAccount() {
-  const { configureApiBase } = useAuth(); // in case device needs different host
+  const { user, loading: authLoading, isAdmin } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [lastMessage, setLastMessage] = useState('');
+  const [confirmTarget, setConfirmTarget] = useState<{ id: string; email: string } | null>(null);
   const navigation = useNavigation();
 
   useEffect(() => {
-    load();
-  }, []);
+    // ensure there's a reasonable default base so the admin UI works without manual setup
+    if (!getApiBaseUrl()) {
+      // default to localhost (works for web and iOS simulator). Android emulator can switch to 10.0.2.2 using the buttons below.
+      setApiBaseUrl('http://localhost:5000');
+    }
+    // wait for auth initialization; only load users if we're signed in as admin
+    if (authLoading) return;
+    try {
+      if (isAdmin && isAdmin()) {
+        load();
+      } else {
+        setLastMessage('You must be signed in as an admin to view this page');
+      }
+    } catch (e) {
+      // fallback: attempt load if isAdmin check fails
+      load();
+    }
+  }, [authLoading]);
 
   async function load() {
     setLoading(true);
     setLastMessage('');
     try {
-      const data = await getUsersServer();
+      const data = await getUsersServer(getApiBaseUrl());
       setUsers(data || []);
     } catch (e) {
       console.error('Load users failed', e);
       const msg = e && e.message ? e.message : 'Load users failed';
-      setLastMessage(`Load error: ${msg}`);
+      if (msg === 'no_token') {
+        setLastMessage('Not authenticated — please sign in as admin');
+      } else {
+        setLastMessage(`Load error: ${msg}`);
+      }
       Alert.alert('Error', msg);
     } finally {
       setLoading(false);
@@ -33,41 +54,46 @@ export default function DeleteStaffAccount() {
   }
 
   async function handleDelete(id, email) {
-    console.log('handleDelete called', id, email);
-    Alert.alert('Confirm delete', `Delete user ${email}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => {
-          // call an async function so Alert callback isn't an async function itself
-          (async () => {
-            try {
-              console.log('deleting user', id);
-              setDeletingId(id);
-              await deleteUserServer(id);
-              // reload from server to avoid any client/server discrepancies
-              await load();
-              const successMsg = `${email} has been deleted`;
-              setLastMessage(successMsg);
-              Alert.alert('Deleted', successMsg);
-            } catch (e) {
-              console.error('Delete failed', e);
-              const msg = e && e.message ? e.message : 'Delete failed';
-              setLastMessage(`Delete error: ${msg}`);
-              Alert.alert('Error', msg);
-            } finally {
-              setDeletingId(null);
-            }
-          })();
-        }
+    // Use an in-component modal for confirmation so it reliably appears on web / emulators
+    setConfirmTarget({ id, email });
+  }
+
+  async function deleteConfirmed(id, email) {
+    // clear any open confirmation UI
+    if (confirmTarget && confirmTarget.id === id) setConfirmTarget(null);
+    // optimistic remove from UI so the user sees immediate feedback
+    setUsers(prev => prev.filter(u => u.id !== id));
+    setDeletingId(id);
+    try {
+      await deleteUserServer(id, getApiBaseUrl());
+      const successMsg = `${email} has been deleted`;
+      setLastMessage(successMsg);
+  // delete succeeded
+      // Optionally refresh to ensure authoritative state
+      try {
+        await load();
+      } catch (e) {
+        // ignore refresh errors (we already removed optimistically)
       }
-    ]);
+      Alert.alert('Deleted', successMsg);
+    } catch (e) {
+      console.error('Delete failed, reloading list', e);
+      const msg = e && e.message ? e.message : 'Delete failed';
+      setLastMessage(`Delete error: ${msg}`);
+      // reload from server to restore authoritative state
+      try {
+        await load();
+      } catch (e2) {
+        console.error('Reload after failed delete also failed', e2);
+      }
+      Alert.alert('Error', msg);
+    } finally {
+      setDeletingId(null);
+    }
   }
 
     function handleCancel() {
       // Handle cancel logic here
-      console.log('Cancel delete');
       (navigation as any).navigate('DashboardAdmin');
     }
 
@@ -75,12 +101,8 @@ export default function DeleteStaffAccount() {
     <View style={styles.container}>
       <Text style={styles.title}>Delete Staff Accounts</Text>
       <Text style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>API: {getApiBaseUrl()}</Text>
-      <Text style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>Token: {getAccessToken() ? String(getAccessToken()).slice(0,12) + '...' : '<none>'}</Text>
-      <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-        <Button title="Use localhost" onPress={() => { setApiBaseUrl('http://localhost:5000'); load(); }} />
-        <View style={{ width: 8 }} />
-        <Button title="Use 10.0.2.2" onPress={() => { setApiBaseUrl('http://10.0.2.2:5000'); load(); }} />
-      </View>
+      
+      
       <Button title="Refresh" onPress={load} disabled={loading} />
       <FlatList
         data={users}
@@ -97,6 +119,25 @@ export default function DeleteStaffAccount() {
       />
         <Button title="Cancel" onPress={handleCancel} />
         {lastMessage ? <Text style={{ marginTop: 12 }}>{lastMessage}</Text> : null}
+        {/* Confirmation modal */}
+        <Modal
+          visible={!!confirmTarget}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setConfirmTarget(null)}
+        >
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}>
+            <View style={{ width: 320, backgroundColor: '#fff', padding: 16, borderRadius: 8 }}>
+              <Text style={{ fontSize: 16, marginBottom: 12 }}>Confirm delete</Text>
+              <Text style={{ marginBottom: 16 }}>Delete user {confirmTarget ? confirmTarget.email : ''}?</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                <Button title="Cancel" onPress={() => setConfirmTarget(null)} />
+                <View style={{ width: 8 }} />
+                <Button title="Delete" color="#d00" onPress={() => confirmTarget && deleteConfirmed(confirmTarget.id, confirmTarget.email)} />
+              </View>
+            </View>
+          </View>
+        </Modal>
     </View>
   );
 }

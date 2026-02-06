@@ -7,7 +7,7 @@ const Login = () => {
   const navigation = useNavigation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { signIn } = useAuth();
+  const { signIn, getAccessToken } = useAuth();
   const [error, setError] = useState('');
 
   const handleLogin = async () => {
@@ -42,7 +42,7 @@ const Login = () => {
       />
       <Button title="Login" onPress={handleLogin} />
       <Text style={styles.error}>{error}</Text>
-      <Image style={styles.logo} source={require('../assets/BoysAndGirlsClubLogo.png')} />
+  <Image style={styles.logo} source={require('../assets/BoysAndGirlsClubLogo.png')} />
     </View>
   );
 }
