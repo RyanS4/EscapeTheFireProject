@@ -12,6 +12,7 @@ export function AuthProvider({ children }) {
   // Set this to true only for offline development convenience.
   const ALLOW_FAKE_FALLBACK = false;
 
+
   // optional: try to restore session on mount (calls fakeGetMe)
   useEffect(() => {
     let mounted = true;
@@ -56,9 +57,16 @@ export function AuthProvider({ children }) {
   async function signIn(email, password) {
     // try server login first
     try {
-      const user = await loginServer(email, password);
-      setUser(user);
-      return user;
+      const res = await loginServer(email, password);
+      // loginServer now returns { token, user }
+      if (res && res.token) {
+        setTokens({ access: res.token });
+      }
+      if (res && res.user) {
+        setUser(res.user);
+        return res.user;
+      }
+      return null;
     } catch (e) {
       // If the server explicitly rejected credentials (401/400), propagate that so the UI can show an error.
       if (e && (e.status === 401 || e.status === 400)) {

@@ -119,7 +119,8 @@ export async function loginServer(email, password, baseUrl) {
   const data = await res.json();
   // the server returns { token, user }
   if (data.token) setTokens({ access: data.token });
-  return data.user;
+  // return full response so callers can inspect token/user if needed
+  return data;
 }
 
 export async function getMeServer(baseUrl) {
