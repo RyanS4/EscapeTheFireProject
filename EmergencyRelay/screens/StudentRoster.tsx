@@ -328,8 +328,8 @@ export default function StudentRoster() {
 
             {/* All rosters list (for admin shows all; for staff may be limited by server) */}
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 80 }}>
-                <Text style={{ fontSize: 16, marginTop: 12 }}>Classes</Text>
-                {rosters.length === 0 ? <Text style={{ color: '#666', marginVertical: 8 }}>No rosters</Text> : null}
+                <Text style={{ fontSize: 16, marginBottom: 8 }}>Classes</Text>
+                {rosters.length === 0 ? <Text style={{ color: '#666', marginVertical: 8 }}>No classes</Text> : null}
                 {rosters.map(item => (
                     <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderColor: '#eee' }}>
                         <TouchableOpacity style={[styles.rosterRow, { flex: 1, padding: 8, backgroundColor: '#fff' }]} onPress={() => openRoster(item.id)}>

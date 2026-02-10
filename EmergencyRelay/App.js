@@ -4,7 +4,8 @@ import DashboardStaff from './screens/DashboardStaff';
 import DashboardAdmin from './screens/DashboardAdmin';
 import CreateStaffAccount from './screens/CreateStaffAccount';
 import DeleteStaffAccount from './screens/DeleteStaffAccount';
-import StudentRoster from './screens/StudentRoster';
+import RostersAdmin from './screens/RostersAdmin';
+import RostersStaff from './screens/RostersStaff';
 import CreateStudentID from './screens/CreateStudentID';
 const Stack = createStackNavigator();
 import { NavigationContainer } from '@react-navigation/native';
@@ -28,7 +29,7 @@ function RootNavigator() {
         <Stack.Screen name="DashboardAdmin" component={DashboardAdmin} />
         <Stack.Screen name="CreateStaffAccount" component={CreateStaffAccount} />
         <Stack.Screen name="DeleteStaffAccount" component={DeleteStaffAccount} />
-        <Stack.Screen name="StudentRoster" component={StudentRoster} />
+        <Stack.Screen name="RostersAdmin" component={RostersAdmin} />
         <Stack.Screen name="CreateStudentID" component={CreateStudentID} />
       </Stack.Navigator>
     );
@@ -37,7 +38,7 @@ function RootNavigator() {
   return (  // Permissions for pages staff can view
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="DashboardStaff" component={DashboardStaff} />
-      <Stack.Screen name="StudentRoster" component={StudentRoster} />
+      <Stack.Screen name="RostersStaff" component={RostersStaff} />
     </Stack.Navigator>
   );
 }

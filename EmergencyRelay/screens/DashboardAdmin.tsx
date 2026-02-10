@@ -16,7 +16,7 @@ const DashboardAdmin = () => {
     function handleViewClassRoster() {
         // Handle view class roster logic here
         console.log('Viewing class roster');
-        (navigation as any).navigate('StudentRoster');
+        (navigation as any).navigate('RostersAdmin');
     }  
 
     async function handleLogout() {
