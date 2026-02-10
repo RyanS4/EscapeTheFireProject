@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, Button, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { listRosters } from '../services/api';
 import RosterDetail from './RosterDetail';
@@ -11,11 +11,13 @@ export default function RostersStaff() {
     const [rosters, setRosters] = useState([]);
     const [loading, setLoading] = useState(false);
 
-    useEffect(() => { loadRosters(); }, []);
+    const [error, setError] = useState(null);
+    useEffect(() => { loadRosters(); }, [user]);
 
     const [selectedRosterId, setSelectedRosterId] = useState(null);
     async function loadRosters() {
         setLoading(true);
+        setError(null);
         try { const data = await listRosters(); setRosters(data || []); } catch (e) { console.error(e); } finally { setLoading(false); }
     }
 
@@ -27,6 +29,8 @@ export default function RostersStaff() {
         <View style={{ flex: 1, padding: 16 }}>
             <Text style={{ fontSize: 20, marginBottom: 12 }}>Rosters (Staff)</Text>
             <Button title="Refresh" onPress={loadRosters} />
+            {loading ? <ActivityIndicator style={{ marginTop: 8 }} /> : null}
+            {error ? <Text style={{ color: '#c00', marginTop: 8 }}>{String(error)}</Text> : null}
             <View style={{ marginVertical: 12 }}>
                 <Text style={{ fontSize: 16 }}>Your roster</Text>
                 {assigned.length === 0 ? <Text style={{ color: '#666' }}>No rosters assigned to you</Text> : null}
@@ -36,14 +40,14 @@ export default function RostersStaff() {
                     </TouchableOpacity>
                 ))}
             </View>
-            {selectedRosterId ? (
-                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#fff' }}>
+            <Modal visible={!!selectedRosterId} animationType="slide" onRequestClose={() => { setSelectedRosterId(null); loadRosters(); }}>
+                <View style={{ flex: 1, backgroundColor: '#fff' }}>
                     <RosterDetail rosterId={selectedRosterId} onClose={() => { setSelectedRosterId(null); loadRosters(); }} />
                 </View>
-            ) : null}
+            </Modal>
             <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 16, marginBottom: 8 }}>All Rosters</Text>
-                <FlatList data={rosters} keyExtractor={i => i.id} renderItem={({ item }) => (
+                <FlatList data={rosters} keyExtractor={i => i.id} ListEmptyComponent={<Text style={{ color: '#666' }}>No rosters available</Text>} renderItem={({ item }) => (
                     <TouchableOpacity style={{ padding: 8, borderBottomWidth: 1, borderColor: '#eee' }} onPress={() => openRoster(item.id)}>
                         <Text>{item.name}{item.assignedToEmail ? ` - ${item.assignedToEmail}` : ''}</Text>
                     </TouchableOpacity>

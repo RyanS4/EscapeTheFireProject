@@ -239,10 +239,7 @@ app.get('/rosters/:id', async (req, res) => {
   try {
     const r = await rosters.findOne({ id });
     if (!r) return res.status(404).json({ error: 'not_found' });
-    // restrict staff to their assigned rosters
-    if (!Array.isArray(caller.roles) || !caller.roles.includes('admin')) {
-      if (r.assignedTo !== caller.id) return res.status(403).json({ error: 'forbidden' });
-    }
+    // allow any authenticated user to view a roster (staff can view other classes)
     let assignedEmail = null;
     if (r.assignedTo) {
       const u = await db.findOne({ id: r.assignedTo });
@@ -333,9 +330,14 @@ app.put('/rosters/:id/students/:sid', async (req, res) => {
   try {
     const roster = await rosters.findOne({ id });
     if (!roster) return res.status(404).json({ error: 'not_found' });
-    // allow only admin or assigned staff to update
-    if (!Array.isArray(caller.roles) || !caller.roles.includes('admin')) {
-      if (roster.assignedTo !== caller.id) return res.status(403).json({ error: 'forbidden' });
+    // allow admin full edit; assigned staff full edit; other staff may only toggle 'accounted'
+    const amAdmin = Array.isArray(caller.roles) && caller.roles.includes('admin');
+    const amAssigned = roster.assignedTo === caller.id;
+    if (!amAdmin && !amAssigned) {
+      // non-assigned staff: only allow a single-field update for 'accounted'
+      const keys = Object.keys(req.body || {});
+      const onlyAccounted = keys.length === 1 && typeof accounted !== 'undefined';
+      if (!onlyAccounted) return res.status(403).json({ error: 'forbidden' });
     }
     const students = roster.students || [];
     const idx = students.findIndex(s => s.id === sid);
@@ -352,16 +354,45 @@ app.put('/rosters/:id/students/:sid', async (req, res) => {
   }
 });
 
+// Remove a student from a roster (admin or assigned staff)
+app.delete('/rosters/:id/students/:sid', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller) return res.status(401).json({ error: 'no_auth' });
+  const { id, sid } = req.params || {};
+  try {
+    const roster = await rosters.findOne({ id });
+    if (!roster) return res.status(404).json({ error: 'not_found' });
+    const amAdmin = Array.isArray(caller.roles) && caller.roles.includes('admin');
+    const amAssigned = roster.assignedTo === caller.id;
+    if (!amAdmin && !amAssigned) return res.status(403).json({ error: 'forbidden' });
+    const studentsArr = roster.students || [];
+    const idx = studentsArr.findIndex(s => s.id === sid);
+    if (idx === -1) return res.status(404).json({ error: 'student_not_found' });
+    const newStudents = studentsArr.filter(s => s.id !== sid);
+    await rosters.update({ id }, { $set: { students: newStudents } }, { multi: false });
+    res.status(204).send();
+  } catch (e) {
+    console.error('Remove student failed', e && e.message);
+    res.status(500).json({ error: 'remove_failed' });
+  }
+});
+
 // Assign a roster to a staff member (admin only)
 app.post('/rosters/:id/assign', async (req, res) => {
   const caller = await userFromToken(req);
   if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('admin')) return res.status(403).json({ error: 'forbidden' });
   const { id } = req.params || {};
-  const { staffId, staffEmail } = req.body || {};
-  if (!staffId && !staffEmail) return res.status(400).json({ error: 'missing_staff' });
+  const { staffId, staffEmail, clear } = req.body || {};
+  // support clearing assignment when clear=true
+  if (!clear && !staffId && !staffEmail) return res.status(400).json({ error: 'missing_staff' });
   try {
     const roster = await rosters.findOne({ id });
     if (!roster) return res.status(404).json({ error: 'not_found' });
+    if (clear) {
+      await rosters.update({ id }, { $set: { assignedTo: null } }, { multi: false });
+      res.json({ id: roster.id, assignedTo: null, assignedToEmail: null });
+      return;
+    }
     let staff = null;
     if (staffId) staff = await db.findOne({ id: staffId, status: 'active' });
     if (!staff && staffEmail) staff = await db.findOne({ email: String(staffEmail).trim().toLowerCase(), status: 'active' });

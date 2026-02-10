@@ -225,10 +225,27 @@ export async function updateStudentInRoster(rosterId, studentId, patch, baseUrl)
   return res.json();
 }
 
-export async function assignRoster(rosterId, { staffId, staffEmail }, baseUrl) {
+export async function deleteStudentFromRoster(rosterId, studentId, baseUrl) {
   if (!accessToken) throw new Error('no_token');
   const base = getBase(baseUrl);
-  const res = await fetch(`${base}/rosters/${rosterId}/assign`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` }, body: JSON.stringify({ staffId, staffEmail }) });
+  const res = await fetch(`${base}/rosters/${rosterId}/students/${studentId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!res.ok && res.status !== 204) {
+    const txt = await res.text();
+    const err = new Error(`Delete student failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return true;
+}
+
+export async function assignRoster(rosterId, { staffId, staffEmail, clear } = {}, baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const body = {};
+  if (typeof clear !== 'undefined') body.clear = !!clear;
+  if (staffId) body.staffId = staffId;
+  if (staffEmail) body.staffEmail = staffEmail;
+  const res = await fetch(`${base}/rosters/${rosterId}/assign`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` }, body: JSON.stringify(body) });
   if (!res.ok) {
     const txt = await res.text();
     const err = new Error(`Assign roster failed: ${res.status} ${txt}`);
