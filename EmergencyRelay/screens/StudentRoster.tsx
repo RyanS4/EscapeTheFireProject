@@ -196,7 +196,6 @@ export default function StudentRoster() {
     if (selectedRoster) {
         return (
             <View style={{ flex: 1, padding: 16 }}>
-                <Button title="Back to Rosters" onPress={() => { setSelectedRoster(null); setStudents([]); }} />
                 <Text style={{ fontSize: 20, marginVertical: 12 }}>{selectedRoster.name}</Text>
                                 { (amAdmin) || (selectedRoster.assignedTo == null) ? (
                                         <View style={{ marginBottom: 8 }}>
@@ -211,15 +210,9 @@ export default function StudentRoster() {
                     { ((amAdmin) || (selectedRoster.assignedTo == null) || (selectedRoster.assignedTo === user?.id)) ? (
                                     <View style={{ marginBottom: 8 }}>
                                         <Text style={{ fontSize: 12, color: '#666' }}>Add student:</Text>
-                                        <TextInput value={newStudentName} onChangeText={setNewStudentName} placeholder="Student name" style={{ borderWidth: 1, borderColor: '#ddd', padding: 8, marginBottom: 8 }} />
-                                        <TextInput value={newStudentImage} onChangeText={setNewStudentImage} placeholder="Image URL (optional)" style={{ borderWidth: 1, borderColor: '#ddd', padding: 8, marginBottom: 8 }} />
                                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                             <View style={{ flex: 1, marginRight: 8 }}>
-                                                <Button title="Add Student" onPress={handleAddStudent} />
-                                            </View>
-                                            <View style={{ width: 8 }} />
-                                            <View style={{ width: 140 }}>
-                                                <Button title="Add existing" onPress={openStudentModal} />
+                                                <Button title="Add New Student(s) to Class" onPress={openStudentModal} />
                                             </View>
                                         </View>
                                     </View>
@@ -235,12 +228,12 @@ export default function StudentRoster() {
                         </View>
                     )}
                 />
+                <Button title="Back to Rosters" onPress={() => { setSelectedRoster(null); setStudents([]); }} />
             </View>
         );
     }
     return (
         <View style={{ flex: 1, padding: 16 }}>
-            <Button title="Back" onPress={() => navigation.goBack()} />
             <Text style={{ fontSize: 20, marginVertical: 12 }}>Rosters</Text>
             <Button title="Refresh" onPress={loadRosters} />
 
@@ -373,6 +366,7 @@ export default function StudentRoster() {
                     </View>
                 </View>
             </Modal>
+            <Button title="Back" onPress={() => navigation.goBack()} />
         </View>
     );
 }
