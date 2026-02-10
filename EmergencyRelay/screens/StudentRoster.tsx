@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, FlatList, StyleSheet, Image, Switch, TouchableOpacity, ActivityIndicator, Alert, TextInput, Modal, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { listRosters, getRoster, updateStudentInRoster, createRoster, addStudentToRoster, assignRoster, getUsersServer, getStudentsServer } from '../services/api';
+import { listRosters, getRoster, updateStudentInRoster, createRoster, addStudentToRoster, assignRoster, getUsersServer, getStudentsServer, deleteRoster } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function StudentRoster() {
@@ -41,6 +41,8 @@ export default function StudentRoster() {
         } catch (e) {
             // loadStaff shows its own error
         }
+        // ensure student modal is closed before showing staff modal to avoid stacking issues
+        setShowStudentModal(false);
         setShowStaffModal(true);
     }
 
@@ -98,6 +100,8 @@ export default function StudentRoster() {
     }
 
     async function openStudentModal() {
+        setSelectedRoster(null); 
+        setStudents([]);
         try {
             if (!studentList || studentList.length === 0) {
                 await loadStudents();
@@ -105,6 +109,8 @@ export default function StudentRoster() {
         } catch (e) {
             // loadStudents already alerts
         }
+        // ensure staff modal is closed before showing student modal to avoid stacking issues
+        setShowStaffModal(false);
         setShowStudentModal(true);
     }
 
@@ -165,6 +171,29 @@ export default function StudentRoster() {
         }
     }
 
+    function confirmDeleteRoster(id, name) {
+        Alert.alert('Delete roster', `Are you sure you want to delete roster "${name}"? This cannot be undone.`, [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Delete', style: 'destructive', onPress: () => handleDeleteRoster(id) }
+        ]);
+    }
+
+    async function handleDeleteRoster(id) {
+        try {
+            await deleteRoster(id);
+            // if currently open, close it
+            if (selectedRoster && (selectedRoster.id === id || selectedRoster._id === id)) {
+                setSelectedRoster(null);
+                setStudents([]);
+            }
+            await loadRosters();
+            Alert.alert('Deleted', 'Roster deleted');
+        } catch (e) {
+            console.error('Delete roster failed', e);
+            Alert.alert('Error', e && e.message ? e.message : 'Delete failed');
+        }
+    }
+
     async function handleAddStudent() {
         if (!selectedRoster) return;
         if (!newStudentName) return Alert.alert('Error', 'Student name required');
@@ -196,7 +225,10 @@ export default function StudentRoster() {
     if (selectedRoster) {
         return (
             <View style={{ flex: 1, padding: 16 }}>
-                <Text style={{ fontSize: 20, marginVertical: 12 }}>{selectedRoster.name}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <Text style={{ fontSize: 20 }}>{selectedRoster.name}</Text>
+                    {amAdmin ? <Button title="Delete Roster" color="#c00" onPress={() => confirmDeleteRoster(selectedRoster.id || selectedRoster._id, selectedRoster.name)} /> : null}
+                </View>
                                 { (amAdmin) || (selectedRoster.assignedTo == null) ? (
                                         <View style={{ marginBottom: 8 }}>
                                             <Text style={{ fontSize: 12, color: '#666' }}>Assign to staff:</Text>
@@ -219,12 +251,13 @@ export default function StudentRoster() {
                     ) : null }
                 <FlatList
                     data={students}
-                    keyExtractor={item => item.id}
+                    style={{ flex: 1 }}
+                    keyExtractor={item => item.id || item._id || `${(item.firstName || '')}-${(item.lastName || '')}-${(item.name || '')}`}
                     renderItem={({ item }) => (
                         <View style={styles.row}>
                             {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={styles.avatar} /> : <View style={[styles.avatar, { backgroundColor: '#eee' }]} />}
-                            <Text style={{ flex: 1 }}>{item.name}</Text>
-                            <Switch value={!!item.accounted} onValueChange={(val) => toggleAccounted(item.id, val)} />
+                            <Text style={{ flex: 1 }}>{item.name || `${item.firstName || ''} ${item.lastName || ''}`.trim()}</Text>
+                            <Switch value={!!item.accounted} onValueChange={(val) => toggleAccounted(item.id || item._id, val)} />
                         </View>
                     )}
                 />
@@ -235,7 +268,7 @@ export default function StudentRoster() {
     return (
         <View style={{ flex: 1, padding: 16 }}>
             <Text style={{ fontSize: 20, marginVertical: 12 }}>Rosters</Text>
-            <Button title="Refresh" onPress={loadRosters} />
+            <Button title="Refresh List" onPress={loadRosters} />
 
             {/* Admin bar: create roster with name, staff assign, and select existing students */}
             {amAdmin ? (
@@ -292,9 +325,12 @@ export default function StudentRoster() {
                 <Text style={{ fontSize: 16, marginTop: 12 }}>All Rosters</Text>
                 {rosters.length === 0 ? <Text style={{ color: '#666', marginVertical: 8 }}>No rosters</Text> : null}
                 {rosters.map(item => (
-                    <TouchableOpacity key={item.id} style={styles.rosterRow} onPress={() => openRoster(item.id)}>
-                        <Text style={{ fontSize: 16 }}>{item.name} {item.assignedToEmail ? `- ${item.assignedToEmail}` : ''}</Text>
-                    </TouchableOpacity>
+                    <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderColor: '#eee' }}>
+                        <TouchableOpacity style={[styles.rosterRow, { flex: 1 }]} onPress={() => openRoster(item.id)}>
+                            <Text style={{ fontSize: 16 }}>{item.name} {item.assignedToEmail ? `- ${item.assignedToEmail}` : ''}</Text>
+                        </TouchableOpacity>
+                        {amAdmin ? <Button title="Delete" color="#c00" onPress={() => confirmDeleteRoster(item.id, item.name)} /> : null}
+                    </View>
                 ))}
             </ScrollView>
 
@@ -361,7 +397,17 @@ export default function StudentRoster() {
                     )}
                     <View style={{ height: 12 }} />
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                        <Button title="Done" onPress={() => setShowStudentModal(false)} />
+                        <Button title="Done" onPress={async () => {
+                            setShowStudentModal(false);
+                            // If a roster is currently open, refresh it so newly-added students appear
+                            try {
+                                if (selectedRoster && selectedRoster.id) {
+                                    await openRoster(selectedRoster.id);
+                                }
+                            } catch (e) {
+                                // openRoster will alert on error; swallow here to avoid double alerts
+                            }
+                        }} />
                         {amAdmin ? <Button title="Clear selection" onPress={() => setSelectedStudentsForCreate([])} /> : null}
                     </View>
                 </View>

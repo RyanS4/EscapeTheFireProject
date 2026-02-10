@@ -378,5 +378,21 @@ app.post('/rosters/:id/assign', async (req, res) => {
   }
 });
 
+// Delete a roster (admin only)
+app.delete('/rosters/:id', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('admin')) return res.status(403).json({ error: 'forbidden' });
+  const { id } = req.params || {};
+  if (!id) return res.status(400).json({ error: 'missing_id' });
+  try {
+    const info = await rosters.remove({ id }, { multi: false });
+    if (!info || info === 0) return res.status(404).json({ error: 'not_found' });
+    res.status(204).send();
+  } catch (e) {
+    console.error('Delete roster failed', e && e.message);
+    res.status(500).json({ error: 'delete_failed' });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`server listening ${PORT}`));

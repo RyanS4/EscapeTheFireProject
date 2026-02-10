@@ -238,6 +238,22 @@ export async function assignRoster(rosterId, { staffId, staffEmail }, baseUrl) {
   return res.json();
 }
 
+/**
+ * Delete a roster (admin only)
+ */
+export async function deleteRoster(id, baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/rosters/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!res.ok && res.status !== 204) {
+    const txt = await res.text();
+    const err = new Error(`Delete roster failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return true;
+}
+
 // --- students client helper ---
 export async function createStudentServer({ firstName, lastName, imageUrl, rosterId } = {}, baseUrl) {
   if (!accessToken) throw new Error('no_token');
