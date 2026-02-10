@@ -11,6 +11,7 @@ export default function DeleteStaffAccount() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [lastMessage, setLastMessage] = useState('');
   const [confirmTarget, setConfirmTarget] = useState<{ id: string; email: string } | null>(null);
+  const [error, setError] = useState('');
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -54,7 +55,10 @@ export default function DeleteStaffAccount() {
   }
 
   async function handleDelete(id, email) {
-    // Use an in-component modal for confirmation so it reliably appears on web / emulators
+    if (id === user?.id) {
+      Alert.alert('Error', 'You cannot delete your own account while signed in');
+      return;
+    }
     setConfirmTarget({ id, email });
   }
 

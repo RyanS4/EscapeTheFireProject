@@ -16,6 +16,7 @@ const DashboardStaff = () => {
     function handleViewClassRoster() {
         // Handle view class roster logic here
         console.log('Viewing class roster');
+        (navigation as any).navigate('RostersStaff');
     }  
 
     async function handleLogout() {
@@ -26,11 +27,15 @@ const DashboardStaff = () => {
 
     return (
         <View style={styles.container}>
-            <Button title="Initiate Alert" onPress={handleAlertInitiation} />
-            <View style={{ height: 16 }} />
-            <Button title="View Class Roster" onPress={handleViewClassRoster} />
-            <View style={{ height: 16 }} />
-            <Button title="Logout" onPress={handleLogout} />
+            <View style={styles.containerBox}>
+                <Text style={styles.title}>Emergency Management</Text>
+                <Text style={styles.caption}>From here you can initiate alerts and your class roster(s)</Text>
+                <Button title="Initiate Alert" onPress={handleAlertInitiation} />
+                <View style={{ height: 16 }} />
+                <Button title="View Class Roster" onPress={handleViewClassRoster} />
+                <View style={{ height: 16 }} />
+                <Button title="Logout" onPress={handleLogout} />
+            </View>
         </View>
     );
 }
@@ -42,9 +47,25 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: '#ffffffff',
     },
+    containerBox: {
+        width: '100%',
+        maxWidth: 400,
+        padding: 16,
+        borderRadius: 8,
+        borderColor: '#000',
+        borderWidth: 1,
+        backgroundColor: '#f9f9f9',
+        elevation: 2,
+    },
     title: {
         fontSize: 24,
         marginBottom: 16,
+        textAlign: 'center',
+    },
+        caption: {
+        fontSize: 12,
+        color: '#666',
+        marginBottom: 8,
         textAlign: 'center',
     },
 });
