@@ -43,17 +43,26 @@ const DashboardAdmin = () => {
 
     return (
         <View style={styles.container}>
-            <Button title="Initiate Alert" onPress={handleAlertInitiation} />
-            <View style={{ height: 16 }} />
-            <Button title="View Class Roster" onPress={handleViewClassRoster} />
-            <View style={{ height: 16 }} />
-            <Button title="Logout" onPress={handleLogout} />
-            <View style={{ height: 16 }} />
-            <Button title="Create New Staff Account" onPress={handleCreateStaffAccount} />
-            <View style={{ height: 16 }} />
-            <Button title="Delete Staff Account" onPress={handleDeleteStaffAccount} />
-            <View style={{ height: 16 }} />
-            <Button title="Create Student ID" onPress={handleCreateStudentID} />
+            <View style={styles.containerBox}>
+                <Text style={styles.title}>Emergency Management</Text>
+                <Text style={styles.caption}>From here you can initiate alerts and view & manage all class rosters</Text>
+                <Button title="Initiate Alert" onPress={handleAlertInitiation} />
+                <View style={{ height: 16 }} />
+                <Button title="View Class Roster" onPress={handleViewClassRoster} />
+                <View style={{ height: 16 }} />
+                <Button title="Logout" onPress={handleLogout} />
+                <View style={{ height: 16 }} />
+            </View>
+            <View style={{ height: 32 }} />
+            <View style={styles.containerBox}>
+                <Text style={styles.title}>Admin Settings</Text>
+                <Text style={styles.caption}>From here you can manage staff accounts and manage student IDs</Text>
+                <Button title="Create New Staff Account" onPress={handleCreateStaffAccount} />
+                <View style={{ height: 16 }} />
+                <Button title="Delete Staff Account" onPress={handleDeleteStaffAccount} />
+                <View style={{ height: 16 }} />
+                <Button title="Create Student ID" onPress={handleCreateStudentID} />
+            </View>
         </View>
     );
 }
@@ -65,9 +74,25 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: '#ffffffff',
     },
+    containerBox: {
+        width: '100%',
+        maxWidth: 400,
+        padding: 16,
+        borderRadius: 8,
+        borderColor: '#000',
+        borderWidth: 1,
+        backgroundColor: '#f9f9f9',
+        elevation: 2,
+    },
     title: {
         fontSize: 24,
         marginBottom: 16,
+        textAlign: 'center',
+    },
+    caption: {
+        fontSize: 12,
+        color: '#666',
+        marginBottom: 8,
         textAlign: 'center',
     },
 });
