@@ -238,6 +238,23 @@ export async function assignRoster(rosterId, { staffId, staffEmail }, baseUrl) {
   return res.json();
 }
 
+// --- students client helper ---
+export async function createStudentServer({ firstName, lastName, imageUrl, rosterId } = {}, baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const body = { firstName, lastName };
+  if (imageUrl) body.imageUrl = imageUrl;
+  if (rosterId) body.rosterId = rosterId;
+  const res = await fetch(`${base}/students`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` }, body: JSON.stringify(body) });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`Create student failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
 /**
  * Admin: list users
  */

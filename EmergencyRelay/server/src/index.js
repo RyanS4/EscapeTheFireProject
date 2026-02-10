@@ -68,6 +68,10 @@ const db = openDb();
 const rostersFile = path.join(DB_DIR, 'rosters.db');
 const rosters = nedb.create({ filename: rostersFile, autoload: true });
 
+// Create a NeDB for students
+const studentsFile = path.join(DB_DIR, 'students.db');
+const students = nedb.create({ filename: studentsFile, autoload: true });
+
 async function migrateRostersFromJson() {
   const jsonFile = path.join(__dirname, '../data/rosters.json');
   try {
@@ -277,6 +281,35 @@ app.post('/rosters/:id/students', async (req, res) => {
   } catch (e) {
     console.error('Add student failed', e && e.message);
     res.status(500).json({ error: 'add_failed' });
+  }
+});
+
+// Create a student (persist to students.db). Optionally add to a roster via rosterId
+app.post('/students', async (req, res) => {
+  try {
+    const caller = await userFromToken(req);
+    if (!caller) return res.status(401).json({ error: 'no_auth' });
+    const { firstName, lastName, imageUrl, rosterId } = req.body || {};
+    if (!firstName || !lastName) return res.status(400).json({ error: 'missing_name' });
+    const sid = makeId();
+    const student = { id: sid, firstName: String(firstName), lastName: String(lastName), imageUrl: imageUrl || null, accounted: false, created_at: new Date().toISOString() };
+    await students.insert(student);
+    // if rosterId provided, try to push into roster.students as well
+    if (rosterId) {
+      try {
+        const roster = await rosters.findOne({ id: rosterId });
+        if (roster) {
+          const studentForRoster = { id: student.id, name: `${student.firstName} ${student.lastName}`, imageUrl: student.imageUrl, accounted: false };
+          await rosters.update({ id: rosterId }, { $push: { students: studentForRoster } }, { multi: false });
+        }
+      } catch (e) {
+        console.warn('failed to add student to roster', e && e.message);
+      }
+    }
+    res.status(201).json(student);
+  } catch (e) {
+    console.error('Create student failed', e && e.message);
+    res.status(500).json({ error: 'create_failed' });
   }
 });
 

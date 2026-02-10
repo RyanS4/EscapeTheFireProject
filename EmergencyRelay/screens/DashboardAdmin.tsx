@@ -35,6 +35,12 @@ const DashboardAdmin = () => {
         (navigation as any).navigate('DeleteStaffAccount');
     }
 
+    function handleCreateStudentID() {
+        // Handle create student ID logic here
+        console.log('Creating student ID');
+        (navigation as any).navigate('CreateStudentID');
+    }
+
     return (
         <View style={styles.container}>
             <Button title="Initiate Alert" onPress={handleAlertInitiation} />
@@ -46,6 +52,8 @@ const DashboardAdmin = () => {
             <Button title="Create New Staff Account" onPress={handleCreateStaffAccount} />
             <View style={{ height: 16 }} />
             <Button title="Delete Staff Account" onPress={handleDeleteStaffAccount} />
+            <View style={{ height: 16 }} />
+            <Button title="Create Student ID" onPress={handleCreateStudentID} />
         </View>
     );
 }

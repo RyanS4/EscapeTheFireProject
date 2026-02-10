@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, FlatList, StyleSheet, Image, Switch, TouchableOpacity, ActivityIndicator, Alert, TextInput, Modal } from 'react-native';
+import { View, Text, Button, FlatList, StyleSheet, Image, Switch, TouchableOpacity, ActivityIndicator, Alert, TextInput, Modal, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { listRosters, getRoster, updateStudentInRoster, createRoster, addStudentToRoster, assignRoster, getUsersServer } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -248,28 +248,23 @@ export default function StudentRoster() {
                     }} />
                 </View>
             ) : null }
-            <Text style={{ fontSize: 16, marginTop: 12 }}>Assigned Rosters</Text>
-            <FlatList
-                data={rosters.filter(r => r.assignedTo)}
-                keyExtractor={item => item.id}
-                style={{ maxHeight: 200 }}
-                renderItem={({ item }) => (
-                    <TouchableOpacity style={styles.rosterRow} onPress={() => openRoster(item.id)}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 80 }}>
+                <Text style={{ fontSize: 16, marginTop: 12 }}>Assigned Rosters</Text>
+                {rosters.filter(r => r.assignedTo).length === 0 ? <Text style={{ color: '#666', marginVertical: 8 }}>No assigned rosters</Text> : null}
+                {rosters.filter(r => r.assignedTo).map(item => (
+                    <TouchableOpacity key={item.id} style={styles.rosterRow} onPress={() => openRoster(item.id)}>
                         <Text style={{ fontSize: 16 }}>{item.name} {item.assignedToEmail ? `- ${item.assignedToEmail}` : ''}</Text>
                     </TouchableOpacity>
-                )}
-            />
-            <Text style={{ fontSize: 16, marginTop: 12 }}>Unassigned Rosters</Text>
-            <FlatList
-                data={rosters.filter(r => !r.assignedTo)}
-                keyExtractor={item => item.id}
-                style={{ maxHeight: 200 }}
-                renderItem={({ item }) => (
-                    <TouchableOpacity style={styles.rosterRow} onPress={() => openRoster(item.id)}>
+                ))}
+
+                <Text style={{ fontSize: 16, marginTop: 12 }}>Unassigned Rosters</Text>
+                {rosters.filter(r => !r.assignedTo).length === 0 ? <Text style={{ color: '#666', marginVertical: 8 }}>No unassigned rosters</Text> : null}
+                {rosters.filter(r => !r.assignedTo).map(item => (
+                    <TouchableOpacity key={item.id} style={styles.rosterRow} onPress={() => openRoster(item.id)}>
                         <Text style={{ fontSize: 16 }}>{item.name}</Text>
                     </TouchableOpacity>
-                )}
-            />
+                ))}
+            </ScrollView>
 
             <Modal visible={showStaffModal} animationType="slide" onRequestClose={() => setShowStaffModal(false)}>
                 <View style={{ flex: 1, padding: 16 }}>
