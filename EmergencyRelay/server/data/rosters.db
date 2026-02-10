@@ -1,5 +1,7 @@
 {"id":"mlfklhd09wq160","name":"Test Class 1","students":[],"created_at":"2026-02-09T19:33:46.404Z","assignedTo":"ml9r5xm6m6m6gc","_id":"4CNSjZXZCxV45RE5"}
-{"id":"mlgug6yxj9fqc5","name":"Test Class 2 - b","students":[{"id":"mlgug6z4qes6ju","name":"UI Test","imageUrl":null,"accounted":false}],"created_at":"2026-02-10T16:57:21.993Z","assignedTo":"mlfx0v7hdvasjo","_id":"H3cDV2OJn2XAuGy5"}
 {"id":"mlg5xt49jmzaay","name":"Test class 987","students":[{"id":"mlg5xt4f0by44o","name":"Bob2 Bob2","imageUrl":null,"accounted":false},{"id":"mlg5xt4jxgko1d","name":"Bob3 Bob3","imageUrl":null,"accounted":false},{"id":"mlg5xt4nikdfv4","name":"Bob Bob","imageUrl":null,"accounted":false}],"created_at":"2026-02-10T05:31:13.449Z","assignedTo":"mlfx0v7hdvasjo","_id":"RB7fyLcqUAPw9lz5"}
 {"id":"mlfx1f0akfr29f","name":"Test Class 2 - AA","students":[],"created_at":"2026-02-10T01:22:05.242Z","assignedTo":"mlfx0v7hdvasjo","_id":"XEu8fJSbGnoZQTEH"}
 {"id":"mlg5v12cs6c0y8","name":"Test Roster 123","students":[{"id":"mlg5v12iwfsdll","name":"Bob2 Bob2","imageUrl":null,"accounted":true},{"id":"mlg5v12o4tdug8","name":"Bob Bob","imageUrl":null,"accounted":false}],"created_at":"2026-02-10T05:29:03.780Z","assignedTo":"ml9r5xm6m6m6gc","_id":"pgsYpkY0RkfpmMwS"}
+{"$$deleted":true,"_id":"RB7fyLcqUAPw9lz5"}
+{"$$deleted":true,"_id":"XEu8fJSbGnoZQTEH"}
+{"$$deleted":true,"_id":"pgsYpkY0RkfpmMwS"}

@@ -31,6 +31,8 @@ export default function StudentRoster() {
     const [staffSelectTarget, setStaffSelectTarget] = useState(null);
     const [selectedStaffForAssign, setSelectedStaffForAssign] = useState(null);
     const [selectedStudentsForCreate, setSelectedStudentsForCreate] = useState([]);
+    const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
+    const [confirmDeleteTarget, setConfirmDeleteTarget] = useState(null);
 
     async function openStaffModal(target) {
         setStaffSelectTarget(target);
@@ -172,10 +174,11 @@ export default function StudentRoster() {
     }
 
     function confirmDeleteRoster(id, name) {
-        Alert.alert('Delete roster', `Are you sure you want to delete roster "${name}"? This cannot be undone.`, [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Delete', style: 'destructive', onPress: () => handleDeleteRoster(id) }
-        ]);
+        // ensure other modals are closed so the confirm modal is visible
+        setShowStaffModal(false);
+        setShowStudentModal(false);
+        setConfirmDeleteTarget({ id, name });
+        setShowConfirmDeleteModal(true);
     }
 
     async function handleDeleteRoster(id) {
@@ -409,6 +412,25 @@ export default function StudentRoster() {
                             }
                         }} />
                         {amAdmin ? <Button title="Clear selection" onPress={() => setSelectedStudentsForCreate([])} /> : null}
+                    </View>
+                </View>
+            </Modal>
+            {/* In-component confirm delete modal (reliable inside app UI) */}
+            <Modal visible={showConfirmDeleteModal} transparent animationType="fade" onRequestClose={() => setShowConfirmDeleteModal(false)}>
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}>
+                    <View style={{ width: '90%', backgroundColor: '#fff', padding: 16, borderRadius: 8 }}>
+                        <Text style={{ fontSize: 18, marginBottom: 12 }}>Delete roster</Text>
+                        <Text style={{ marginBottom: 12 }}>Are you sure you want to delete roster "{confirmDeleteTarget ? confirmDeleteTarget.name : ''}"? This cannot be undone.</Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                            <Button title="Cancel" onPress={() => { setShowConfirmDeleteModal(false); setConfirmDeleteTarget(null); }} />
+                            <View style={{ width: 12 }} />
+                            <Button title="Delete" color="#c00" onPress={async () => {
+                                setShowConfirmDeleteModal(false);
+                                const id = confirmDeleteTarget && confirmDeleteTarget.id;
+                                setConfirmDeleteTarget(null);
+                                if (id) await handleDeleteRoster(id);
+                            }} />
+                        </View>
                     </View>
                 </View>
             </Modal>
