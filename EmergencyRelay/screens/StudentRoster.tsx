@@ -310,26 +310,29 @@ export default function StudentRoster() {
                 </View>
             ) : null}
 
-            {/* For staff: show their assigned roster in full at the top */}
-            {!amAdmin && rosters && rosters.length > 0 ? (
+            {/* For staff: show their assigned roster(s) in full at the top; staff still see all rosters below */}
+            {!amAdmin ? (
                 <View style={{ marginBottom: 12, padding: 8, borderWidth: 1, borderColor: '#eee', borderRadius: 6 }}>
-                    <Text style={{ fontSize: 16, marginBottom: 8 }}>Your roster</Text>
-                    {/* rosters returned for staff are typically only their assigned ones */}
-                    {rosters.map(r => (
-                        <TouchableOpacity key={r.id} onPress={() => openRoster(r.id)} style={{ padding: 8, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eee' }}>
-                            <Text style={{ fontSize: 16 }}>{r.name}{r.assignedToEmail ? ` - ${r.assignedToEmail}` : ''}</Text>
-                        </TouchableOpacity>
-                    ))}
+                    <Text style={{ fontSize: 16, marginBottom: 8 }}>Your Class</Text>
+                    {(() => {
+                        const assigned = (rosters || []).filter(r => r.assignedTo && user && r.assignedTo === user.id);
+                        if (!assigned || assigned.length === 0) return <Text style={{ color: '#666', marginVertical: 8 }}>No classes assigned to you</Text>;
+                        return assigned.map(r => (
+                            <TouchableOpacity key={r.id} onPress={() => openRoster(r.id)} style={{ padding: 8, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eee' }}>
+                                <Text style={{ fontSize: 16 }}>{r.name}{r.assignedToEmail ? ` - ${r.assignedToEmail}` : ''}</Text>
+                            </TouchableOpacity>
+                        ));
+                    })()}
                 </View>
             ) : null}
 
             {/* All rosters list (for admin shows all; for staff may be limited by server) */}
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 80 }}>
-                <Text style={{ fontSize: 16, marginTop: 12 }}>All Rosters</Text>
+                <Text style={{ fontSize: 16, marginTop: 12 }}>Classes</Text>
                 {rosters.length === 0 ? <Text style={{ color: '#666', marginVertical: 8 }}>No rosters</Text> : null}
                 {rosters.map(item => (
                     <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderColor: '#eee' }}>
-                        <TouchableOpacity style={[styles.rosterRow, { flex: 1 }]} onPress={() => openRoster(item.id)}>
+                        <TouchableOpacity style={[styles.rosterRow, { flex: 1, padding: 8, backgroundColor: '#fff' }]} onPress={() => openRoster(item.id)}>
                             <Text style={{ fontSize: 16 }}>{item.name} {item.assignedToEmail ? `- ${item.assignedToEmail}` : ''}</Text>
                         </TouchableOpacity>
                         {amAdmin ? <Button title="Delete" color="#c00" onPress={() => confirmDeleteRoster(item.id, item.name)} /> : null}

@@ -192,11 +192,7 @@ app.get('/rosters', async (req, res) => {
   const caller = await userFromToken(req);
   if (!caller) return res.status(401).json({ error: 'no_auth' });
   try {
-    let rows = await rosters.find({});
-    // if caller is staff, filter to only assigned rosters
-    if (!Array.isArray(caller.roles) || !caller.roles.includes('admin')) {
-      rows = rows.filter(r => r.assignedTo === caller.id);
-    }
+    const rows = await rosters.find({});
     // return id, name, assignedTo and assignedToEmail if possible
     const out = [];
     for (const r of rows) {
