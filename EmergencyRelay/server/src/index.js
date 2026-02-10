@@ -313,6 +313,21 @@ app.post('/students', async (req, res) => {
   }
 });
 
+// List students (requires auth)
+app.get('/students', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller) return res.status(401).json({ error: 'no_auth' });
+  try {
+    const rows = await students.find({});
+    // normalize minimal fields
+    const out = (rows || []).map(s => ({ id: s.id, firstName: s.firstName, lastName: s.lastName, imageUrl: s.imageUrl }));
+    res.json(out);
+  } catch (e) {
+    console.error('List students failed', e && e.message);
+    res.status(500).json({ error: 'list_failed' });
+  }
+});
+
 // Update a student (toggle accounted or update name/image)
 app.put('/rosters/:id/students/:sid', async (req, res) => {
   const caller = await userFromToken(req);

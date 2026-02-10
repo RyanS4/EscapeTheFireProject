@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, FlatList, StyleSheet, Image, Switch, TouchableOpacity, ActivityIndicator, Alert, TextInput, Modal, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { listRosters, getRoster, updateStudentInRoster, createRoster, addStudentToRoster, assignRoster, getUsersServer } from '../services/api';
+import { listRosters, getRoster, updateStudentInRoster, createRoster, addStudentToRoster, assignRoster, getUsersServer, getStudentsServer } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function StudentRoster() {
@@ -11,6 +11,10 @@ export default function StudentRoster() {
     const [rosters, setRosters] = useState([]);
     const [selectedRoster, setSelectedRoster] = useState(null);
     const [students, setStudents] = useState([]);
+    // student-picker modal state (server-backed students list)
+    const [studentList, setStudentList] = useState([]);
+    const [studentLoading, setStudentLoading] = useState(false);
+    const [showStudentModal, setShowStudentModal] = useState(false);
     const [loading, setLoading] = useState(false);
         const [creating, setCreating] = useState(false);
         const [newRosterName, setNewRosterName] = useState('');
@@ -26,6 +30,7 @@ export default function StudentRoster() {
     const [showStaffModal, setShowStaffModal] = useState(false);
     const [staffSelectTarget, setStaffSelectTarget] = useState(null);
     const [selectedStaffForAssign, setSelectedStaffForAssign] = useState(null);
+    const [selectedStudentsForCreate, setSelectedStudentsForCreate] = useState([]);
 
     async function openStaffModal(target) {
         setStaffSelectTarget(target);
@@ -37,6 +42,14 @@ export default function StudentRoster() {
             // loadStaff shows its own error
         }
         setShowStaffModal(true);
+    }
+
+    function toggleSelectedStudentForCreate(student) {
+        setSelectedStudentsForCreate(prev => {
+            const exists = prev.find(s => s.id === student.id);
+            if (exists) return prev.filter(s => s.id !== student.id);
+            return [...prev, student];
+        });
     }
 
     useEffect(() => {
@@ -71,6 +84,30 @@ export default function StudentRoster() {
         }
     }
 
+    async function loadStudents() {
+        setStudentLoading(true);
+        try {
+            const rows = await getStudentsServer();
+            setStudentList(rows || []);
+        } catch (e) {
+            console.error('Load students failed', e);
+            Alert.alert('Error', 'Could not load students');
+        } finally {
+            setStudentLoading(false);
+        }
+    }
+
+    async function openStudentModal() {
+        try {
+            if (!studentList || studentList.length === 0) {
+                await loadStudents();
+            }
+        } catch (e) {
+            // loadStudents already alerts
+        }
+        setShowStudentModal(true);
+    }
+
     async function openRoster(id) {
         setLoading(true);
         try {
@@ -90,9 +127,21 @@ export default function StudentRoster() {
         setCreating(true);
         try {
             const r = await createRoster({ name: newRosterName, assignedToEmail: creatingRosterStaff ? creatingRosterStaff.email : undefined });
+            // if admin selected existing students to add, push them into the roster
+            if (r && r.id && selectedStudentsForCreate && selectedStudentsForCreate.length > 0) {
+                for (const s of selectedStudentsForCreate) {
+                    const name = `${s.firstName} ${s.lastName}`;
+                    try {
+                        await addStudentToRoster(r.id, { name, imageUrl: s.imageUrl || undefined });
+                    } catch (e) {
+                        console.warn('Failed to add selected student to roster', e && e.message);
+                    }
+                }
+            }
             setNewRosterName('');
             setAssignEmail('');
             setCreatingRosterStaff(null);
+            setSelectedStudentsForCreate([]);
             await loadRosters();
             if (r && r.id) openRoster(r.id);
         } catch (e) {
@@ -164,7 +213,15 @@ export default function StudentRoster() {
                                         <Text style={{ fontSize: 12, color: '#666' }}>Add student:</Text>
                                         <TextInput value={newStudentName} onChangeText={setNewStudentName} placeholder="Student name" style={{ borderWidth: 1, borderColor: '#ddd', padding: 8, marginBottom: 8 }} />
                                         <TextInput value={newStudentImage} onChangeText={setNewStudentImage} placeholder="Image URL (optional)" style={{ borderWidth: 1, borderColor: '#ddd', padding: 8, marginBottom: 8 }} />
-                                        <Button title="Add Student" onPress={handleAddStudent} />
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                            <View style={{ flex: 1, marginRight: 8 }}>
+                                                <Button title="Add Student" onPress={handleAddStudent} />
+                                            </View>
+                                            <View style={{ width: 8 }} />
+                                            <View style={{ width: 140 }}>
+                                                <Button title="Add existing" onPress={openStudentModal} />
+                                            </View>
+                                        </View>
                                     </View>
                     ) : null }
                 <FlatList
@@ -181,24 +238,24 @@ export default function StudentRoster() {
             </View>
         );
     }
-
     return (
         <View style={{ flex: 1, padding: 16 }}>
             <Button title="Back" onPress={() => navigation.goBack()} />
-            <Text style={{ fontSize: 20, marginBottom: 12 }}>Rosters</Text>
+            <Text style={{ fontSize: 20, marginVertical: 12 }}>Rosters</Text>
             <Button title="Refresh" onPress={loadRosters} />
 
+            {/* Admin bar: create roster with name, staff assign, and select existing students */}
             {amAdmin ? (
-                <View style={{ marginVertical: 12, padding: 8, borderWidth: 1, borderColor: '#eee', borderRadius: 6 }}>
-                    <Text style={{ fontSize: 16, marginBottom: 8 }}>Create roster</Text>
+                <View style={{ marginVertical: 12, padding: 12, borderWidth: 1, borderColor: '#eee', borderRadius: 6, backgroundColor: '#fafafa' }}>
+                    <Text style={{ fontSize: 16, marginBottom: 8 }}>Create new roster</Text>
                     <TextInput value={newRosterName} onChangeText={setNewRosterName} placeholder="Roster name" style={{ borderWidth: 1, borderColor: '#ddd', padding: 8, marginBottom: 8 }} />
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                        <Button title={creatingRosterStaff ? `Assign: ${creatingRosterStaff.email}` : 'Select staff to assign (optional)'} onPress={() => openStaffModal('createRoster')} />
+                        <Button title={creatingRosterStaff ? `Assign: ${creatingRosterStaff.email}` : 'Select staff (optional)'} onPress={() => openStaffModal('createRoster')} />
+                        <View style={{ width: 8 }} />
+                        <Button title={selectedStudentsForCreate.length > 0 ? `Students: ${selectedStudentsForCreate.length}` : 'Select students (optional)'} onPress={() => openStudentModal()} />
                         <View style={{ width: 8 }} />
                         <Button title={creating ? 'Creating...' : 'Create Roster'} onPress={async () => {
-                            // hard-check selected staff if provided
                             if (creatingRosterStaff) {
-                                // ensure staffList is loaded
                                 if (!staffList || staffList.length === 0) await loadStaff();
                                 const found = (staffList || []).find(s => s.email && s.email.toLowerCase() === creatingRosterStaff.email.toLowerCase());
                                 if (!found) return Alert.alert('Error', 'No staff member found with that email');
@@ -207,65 +264,48 @@ export default function StudentRoster() {
                                 await handleCreateRoster();
                                 Alert.alert('Success', 'Roster created');
                             } catch (e) {
-                                // handleCreateRoster already alerts; rethrow if needed
+                                // handleCreateRoster already alerts
                             }
                         }} />
                     </View>
-                    <View style={{ height: 8 }} />
-                    <Text style={{ fontSize: 16, marginBottom: 8 }}>Create student and assign to roster</Text>
-                    <TextInput value={newGlobalStudentName} onChangeText={setNewGlobalStudentName} placeholder="Student name" style={{ borderWidth: 1, borderColor: '#ddd', padding: 8, marginBottom: 8 }} />
-                    <TextInput value={newGlobalStudentImage} onChangeText={setNewGlobalStudentImage} placeholder="Image URL (optional)" style={{ borderWidth: 1, borderColor: '#ddd', padding: 8, marginBottom: 8 }} />
-                    <Text style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>Select roster to add to:</Text>
-                    <View style={{ maxHeight: 140, marginBottom: 8 }}>
-                        <FlatList
-                            data={rosters}
-                            keyExtractor={i => i.id}
-                            renderItem={({ item }) => (
-                                <TouchableOpacity onPress={() => setSelectedRosterForStudent(item.id)} style={{ padding: 8, backgroundColor: selectedRosterForStudent === item.id ? '#def' : '#fff', borderBottomWidth: 1, borderColor: '#eee' }}>
-                                    <Text>{item.name}</Text>
-                                </TouchableOpacity>
-                            )}
-                        />
-                    </View>
-                    <Button title="Create & Assign Student" onPress={async () => {
-                        if (!newGlobalStudentName) return Alert.alert('Error', 'Student name required');
-                        if (!selectedRosterForStudent) return Alert.alert('Error', 'Select a roster');
-                        try {
-                            const s = await addStudentToRoster(selectedRosterForStudent, { name: newGlobalStudentName, imageUrl: newGlobalStudentImage || undefined });
-                            setNewGlobalStudentName('');
-                            setNewGlobalStudentImage('');
-                            setSelectedRosterForStudent(null);
-                            await loadRosters();
-                            // If the roster currently open, add to its list
-                            if (selectedRoster && selectedRoster.id === selectedRosterForStudent) {
-                                setStudents(prev => [...prev, s]);
-                            }
-                            Alert.alert('Success', 'Student created and assigned');
-                        } catch (e) {
-                            console.error('Create & assign student failed', e);
-                            Alert.alert('Error', e && e.message ? e.message : 'Create failed');
-                        }
-                    }} />
+                    {/* show selected students */}
+                    {selectedStudentsForCreate.length > 0 ? (
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 }}>
+                            {selectedStudentsForCreate.map(s => (
+                                <View key={s.id} style={{ padding: 6, backgroundColor: '#eef', borderRadius: 12, marginRight: 8, marginBottom: 8 }}>
+                                    <Text>{s.firstName} {s.lastName}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    ) : null}
                 </View>
-            ) : null }
+            ) : null}
+
+            {/* For staff: show their assigned roster in full at the top */}
+            {!amAdmin && rosters && rosters.length > 0 ? (
+                <View style={{ marginBottom: 12, padding: 8, borderWidth: 1, borderColor: '#eee', borderRadius: 6 }}>
+                    <Text style={{ fontSize: 16, marginBottom: 8 }}>Your roster</Text>
+                    {/* rosters returned for staff are typically only their assigned ones */}
+                    {rosters.map(r => (
+                        <TouchableOpacity key={r.id} onPress={() => openRoster(r.id)} style={{ padding: 8, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eee' }}>
+                            <Text style={{ fontSize: 16 }}>{r.name}{r.assignedToEmail ? ` - ${r.assignedToEmail}` : ''}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            ) : null}
+
+            {/* All rosters list (for admin shows all; for staff may be limited by server) */}
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 80 }}>
-                <Text style={{ fontSize: 16, marginTop: 12 }}>Assigned Rosters</Text>
-                {rosters.filter(r => r.assignedTo).length === 0 ? <Text style={{ color: '#666', marginVertical: 8 }}>No assigned rosters</Text> : null}
-                {rosters.filter(r => r.assignedTo).map(item => (
+                <Text style={{ fontSize: 16, marginTop: 12 }}>All Rosters</Text>
+                {rosters.length === 0 ? <Text style={{ color: '#666', marginVertical: 8 }}>No rosters</Text> : null}
+                {rosters.map(item => (
                     <TouchableOpacity key={item.id} style={styles.rosterRow} onPress={() => openRoster(item.id)}>
                         <Text style={{ fontSize: 16 }}>{item.name} {item.assignedToEmail ? `- ${item.assignedToEmail}` : ''}</Text>
                     </TouchableOpacity>
                 ))}
-
-                <Text style={{ fontSize: 16, marginTop: 12 }}>Unassigned Rosters</Text>
-                {rosters.filter(r => !r.assignedTo).length === 0 ? <Text style={{ color: '#666', marginVertical: 8 }}>No unassigned rosters</Text> : null}
-                {rosters.filter(r => !r.assignedTo).map(item => (
-                    <TouchableOpacity key={item.id} style={styles.rosterRow} onPress={() => openRoster(item.id)}>
-                        <Text style={{ fontSize: 16 }}>{item.name}</Text>
-                    </TouchableOpacity>
-                ))}
             </ScrollView>
 
+            {/* Staff selection modal */}
             <Modal visible={showStaffModal} animationType="slide" onRequestClose={() => setShowStaffModal(false)}>
                 <View style={{ flex: 1, padding: 16 }}>
                     <Text style={{ fontSize: 18, marginBottom: 12 }}>Select staff</Text>
@@ -286,6 +326,51 @@ export default function StudentRoster() {
                     )}
                     <View style={{ height: 12 }} />
                     <Button title="Close" onPress={() => setShowStaffModal(false)} />
+                </View>
+            </Modal>
+
+            {/* Student modal reused for both single-add and multi-select */}
+            <Modal visible={showStudentModal} animationType="slide" onRequestClose={() => setShowStudentModal(false)}>
+                <View style={{ flex: 1, padding: 16 }}>
+                    <Text style={{ fontSize: 18, marginBottom: 12 }}>Select student</Text>
+                    {studentLoading ? <ActivityIndicator /> : (
+                        <FlatList
+                            data={studentList}
+                            keyExtractor={i => i.id}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity style={{ padding: 12, borderBottomWidth: 1, borderColor: '#eee', flexDirection: 'row', alignItems: 'center' }} onPress={async () => {
+                                    if (amAdmin) {
+                                        // toggle multi-select for admin create flow
+                                        toggleSelectedStudentForCreate(item);
+                                    } else {
+                                        // when selecting an existing student as staff (from within roster add flow)
+                                        if (!selectedRoster) return Alert.alert('Error', 'No roster open');
+                                        try {
+                                            const name = `${item.firstName} ${item.lastName}`;
+                                            const s = await addStudentToRoster(selectedRoster.id, { name, imageUrl: item.imageUrl || undefined });
+                                            setStudents(prev => [...prev, s]);
+                                            setShowStudentModal(false);
+                                            Alert.alert('Success', 'Student added to roster');
+                                        } catch (e) {
+                                            console.error('Add existing student failed', e);
+                                            Alert.alert('Error', e && e.message ? e.message : 'Add failed');
+                                        }
+                                    }
+                                }}>
+                                    {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={{ width: 40, height: 40, borderRadius: 20, marginRight: 12 }} /> : <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#eee', marginRight: 12 }} />}
+                                    <Text style={{ fontSize: 16, flex: 1 }}>{item.firstName} {item.lastName}</Text>
+                                    {amAdmin ? (
+                                        <Text style={{ color: selectedStudentsForCreate.find(s => s.id === item.id) ? '#06c' : '#999' }}>{selectedStudentsForCreate.find(s => s.id === item.id) ? 'Selected' : 'Tap to select'}</Text>
+                                    ) : null}
+                                </TouchableOpacity>
+                            )}
+                        />
+                    )}
+                    <View style={{ height: 12 }} />
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <Button title="Done" onPress={() => setShowStudentModal(false)} />
+                        {amAdmin ? <Button title="Clear selection" onPress={() => setSelectedStudentsForCreate([])} /> : null}
+                    </View>
                 </View>
             </Modal>
         </View>

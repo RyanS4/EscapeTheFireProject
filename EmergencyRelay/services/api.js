@@ -275,6 +275,22 @@ export async function getUsersServer(baseUrl) {
 }
 
 /**
+ * List students from server
+ */
+export async function getStudentsServer(baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/students`, { method: 'GET', headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`Get students failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+/**
  * Admin: delete a user by id
  */
 export async function deleteUserServer(id, baseUrl) {
