@@ -31,12 +31,13 @@ export default function RostersStaff() {
             <Button title="Refresh" onPress={loadRosters} />
             {loading ? <ActivityIndicator style={{ marginTop: 8 }} /> : null}
             {error ? <Text style={{ color: '#c00', marginTop: 8 }}>{String(error)}</Text> : null}
-            <View style={{ marginVertical: 12 }}>
-                <Text style={{ fontSize: 16 }}>Your roster</Text>
-                {assigned.length === 0 ? <Text style={{ color: '#666' }}>No rosters assigned to you</Text> : null}
+            <View style={styles.rosterBox}>
+                <Text style={styles.RosterTitle}>My Classes</Text>
+                {assigned.length === 0 ? <Text style={[styles.RosterText, { color: '#666' }]}>No rosters assigned to you</Text> : null}
                 {assigned.map(r => (
                     <TouchableOpacity key={r.id} style={{ padding: 8, borderBottomWidth: 1, borderColor: '#eee' }} onPress={() => openRoster(r.id)}>
-                        <Text>{r.name}{r.assignedToEmail ? ` - ${r.assignedToEmail}` : ''}</Text>
+                        <Text style={styles.RosterText}>Class: {r.name}</Text>
+                        <Text style={styles.RosterText}>Staff: {r.assignedToEmail ? `${r.assignedToEmail}` : ''}</Text>
                     </TouchableOpacity>
                 ))}
             </View>
@@ -45,11 +46,12 @@ export default function RostersStaff() {
                     <RosterDetail rosterId={selectedRosterId} onClose={() => { setSelectedRosterId(null); loadRosters(); }} />
                 </View>
             </Modal>
-            <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 16, marginBottom: 8 }}>All Rosters</Text>
+            <View style={styles.rosterBox}>
+                <Text style={styles.RosterTitle}>All Classes</Text>
                 <FlatList data={rosters} keyExtractor={i => i.id} ListEmptyComponent={<Text style={{ color: '#666' }}>No rosters available</Text>} renderItem={({ item }) => (
                     <TouchableOpacity style={{ padding: 8, borderBottomWidth: 1, borderColor: '#eee' }} onPress={() => openRoster(item.id)}>
-                        <Text>{item.name}{item.assignedToEmail ? ` - ${item.assignedToEmail}` : ''}</Text>
+                        <Text style={styles.RosterText}>Class: {item.name}</Text>
+                        <Text style={styles.RosterText}>Staff: {item.assignedToEmail ? `${item.assignedToEmail}` : ''}</Text>
                     </TouchableOpacity>
                 )} />
             </View>
@@ -59,4 +61,23 @@ export default function RostersStaff() {
     );
 }
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+    RosterText: {
+        marginTop: 4,
+        fontSize: 16,
+        marginBottom: 4,
+    },
+    RosterTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 12,
+    },
+    rosterBox: {
+        marginVertical: 12, 
+        padding: 12, 
+        borderWidth: 1, 
+        borderColor: '#eee', 
+        borderRadius: 6, 
+        backgroundColor: '#fafafa'
+    }
+});

@@ -166,6 +166,20 @@ app.delete('/admin/users/:id', async (req, res) => {
   }
   const info = await db.remove({ id }, { multi: false });
   if (!info || info === 0) return res.status(404).json({ error: 'not_found' });
+  try {
+    // clear any roster assignments that referenced this user
+    const allR = await rosters.find({});
+    for (const r of allR) {
+      if (r.assignedTo === id) {
+        await rosters.update({ id: r.id || r._id }, { $set: { assignedTo: null } }, { multi: false });
+      }
+    }
+    // compact datafiles to ensure hard removal
+    try { await db.persistence.compactDatafile(); } catch (e) { /* ignore */ }
+    try { await rosters.persistence.compactDatafile(); } catch (e) { /* ignore */ }
+  } catch (e) {
+    console.warn('Post-delete cleanup failed', e && e.message);
+  }
   res.status(204).send();
 });
 
@@ -321,6 +335,37 @@ app.get('/students', async (req, res) => {
   }
 });
 
+// Delete a student (admin only)
+app.delete('/students/:id', async (req, res) => {
+  const { id } = req.params || {};
+  if (!id) return res.status(400).json({ error: 'missing_id' });
+  const caller = await userFromToken(req);
+  if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('admin')) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  try {
+    // remove from students DB
+    const info = await students.remove({ id }, { multi: false });
+    if (!info || info === 0) return res.status(404).json({ error: 'not_found' });
+    // remove from any rosters that reference this student id
+    const allRosters = await rosters.find({});
+    for (const r of allRosters) {
+      const orig = r.students || [];
+      const filtered = orig.filter(s => s.id !== id);
+      if (filtered.length !== orig.length) {
+        await rosters.update({ id: r.id || r._id }, { $set: { students: filtered } }, { multi: false });
+      }
+    }
+    // compact datafiles to ensure hard removal
+    try { await students.persistence.compactDatafile(); } catch (e) { /* ignore */ }
+    try { await rosters.persistence.compactDatafile(); } catch (e) { /* ignore */ }
+    res.status(204).send();
+  } catch (e) {
+    console.error('Delete student failed', e && e.message);
+    res.status(500).json({ error: 'delete_failed' });
+  }
+});
+
 // Update a student (toggle accounted or update name/image)
 app.put('/rosters/:id/students/:sid', async (req, res) => {
   const caller = await userFromToken(req);
@@ -414,6 +459,7 @@ app.delete('/rosters/:id', async (req, res) => {
   try {
     const info = await rosters.remove({ id }, { multi: false });
     if (!info || info === 0) return res.status(404).json({ error: 'not_found' });
+    try { await rosters.persistence.compactDatafile(); } catch (e) { /* ignore */ }
     res.status(204).send();
   } catch (e) {
     console.error('Delete roster failed', e && e.message);

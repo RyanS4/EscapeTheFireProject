@@ -323,6 +323,19 @@ export async function getStudentsServer(baseUrl) {
   return res.json();
 }
 
+export async function deleteStudentServer(id, baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/students/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!res.ok && res.status !== 204) {
+    const txt = await res.text();
+    const err = new Error(`Delete student failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return true;
+}
+
 /**
  * Admin: delete a user by id
  */
