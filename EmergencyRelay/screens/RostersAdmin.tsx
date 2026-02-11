@@ -104,9 +104,9 @@ export default function RostersAdmin() {
             <Text style={{ fontSize: 20, marginBottom: 12 }}>Rosters (Admin)</Text>
             <Button title="Refresh" onPress={loadRosters} />
 
-            <View style={{ marginVertical: 12, padding: 12, borderWidth: 1, borderColor: '#eee', borderRadius: 6, backgroundColor: '#fafafa' }}>
-                <Text style={{ fontSize: 16, marginBottom: 8 }}>Create new roster</Text>
-                <TextInput value={newRosterName} onChangeText={setNewRosterName} placeholder="Roster name" style={{ borderWidth: 1, borderColor: '#ddd', padding: 8, marginBottom: 8 }} />
+            <View style={styles.rosterBox}>
+                <Text style={styles.RosterTitle}>Create new Class</Text>
+                <TextInput value={newRosterName} onChangeText={setNewRosterName} placeholder="Class name" style={{ borderWidth: 1, borderColor: '#ddd', padding: 8, marginBottom: 8 }} />
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                     <Button title={creatingRosterStaff ? `Assign: ${creatingRosterStaff.email}` : 'Select staff (optional)'} onPress={() => openStaffModal('createRoster')} />
                     <View style={{ width: 8 }} />
@@ -116,13 +116,14 @@ export default function RostersAdmin() {
                 </View>
             </View>
 
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 80 }}>
-                <Text style={{ fontSize: 16, marginBottom: 8 }}>All Rosters</Text>
+            <ScrollView style={styles.rosterBox} contentContainerStyle={{ paddingBottom: 80 }}>
+                <Text style={styles.RosterTitle}>All Rosters</Text>
                 {rosters.length === 0 ? <Text style={{ color: '#666' }}>No rosters</Text> : null}
                 {rosters.map(item => (
                     <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderColor: '#eee' }}>
                         <TouchableOpacity style={[styles.rosterRow, { flex: 1, padding: 8, backgroundColor: '#fff' }]} onPress={() => openRoster(item.id)}>
-                            <Text style={{ fontSize: 16 }}>{item.name} {item.assignedToEmail ? `- ${item.assignedToEmail}` : ''}</Text>
+                            <Text style={styles.RosterText}>Class: {item.name}</Text>
+                            <Text style={styles.RosterText}>Staff: {item.assignedToEmail ? `${item.assignedToEmail}` : ''}</Text>
                         </TouchableOpacity>
                         <Button title="Delete" color="#c00" onPress={() => confirmDeleteRoster(item.id, item.name)} />
                     </View>
@@ -190,7 +191,41 @@ export default function RostersAdmin() {
 }
 
 const styles = StyleSheet.create({
-    row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderColor: '#eee' },
-    avatar: { width: 48, height: 48, borderRadius: 24, marginRight: 12 },
-    rosterRow: { paddingVertical: 12, borderBottomWidth: 1, borderColor: '#eee' }
+    // fix formatting
+    row: { 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        paddingVertical: 8, 
+        borderBottomWidth: 1, 
+        borderColor: '#eee' 
+    },
+    avatar: { 
+        width: 48,
+        height: 48, 
+        borderRadius: 24, 
+        marginRight: 12 
+    },
+    rosterRow: { 
+        paddingVertical: 12, 
+        borderBottomWidth: 1, 
+        borderColor: '#eee' 
+    },
+        RosterTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 12,
+    },
+    RosterText: {
+        marginTop: 4,
+        fontSize: 16,
+        marginBottom: 4,
+    },
+    rosterBox: {
+        marginVertical: 12, 
+        padding: 12, 
+        borderWidth: 1, 
+        borderColor: '#eee', 
+        borderRadius: 6, 
+        backgroundColor: '#fafafa'
+    }
 });

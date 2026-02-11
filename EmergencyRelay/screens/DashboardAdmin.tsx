@@ -35,6 +35,11 @@ const DashboardAdmin = () => {
         (navigation as any).navigate('DeleteStaffAccount');
     }
 
+    function handleDeleteStudentID() {
+        console.log('Deleting student account');
+        (navigation as any).navigate('DeleteStudentAccount');
+    }
+
     function handleCreateStudentID() {
         // Handle create student ID logic here
         console.log('Creating student ID');
@@ -46,22 +51,29 @@ const DashboardAdmin = () => {
             <View style={styles.containerBox}>
                 <Text style={styles.title}>Emergency Management</Text>
                 <Text style={styles.caption}>From here you can initiate alerts and view & manage all class rosters</Text>
+                <View style={{ height: 16 }} />
                 <Button title="Initiate Alert" onPress={handleAlertInitiation} />
                 <View style={{ height: 16 }} />
                 <Button title="View Class Roster" onPress={handleViewClassRoster} />
-                <View style={{ height: 16 }} />
-                <Button title="Logout" onPress={handleLogout} />
                 <View style={{ height: 16 }} />
             </View>
             <View style={{ height: 32 }} />
             <View style={styles.containerBox}>
                 <Text style={styles.title}>Admin Settings</Text>
                 <Text style={styles.caption}>From here you can manage staff accounts and manage student IDs</Text>
+                <View style={{ height: 16 }} />
                 <Button title="Create New Staff Account" onPress={handleCreateStaffAccount} />
                 <View style={{ height: 16 }} />
                 <Button title="Delete Staff Account" onPress={handleDeleteStaffAccount} />
                 <View style={{ height: 16 }} />
                 <Button title="Create Student ID" onPress={handleCreateStudentID} />
+                <View style={{ height: 16 }} />
+                <Button title="Delete Student ID" onPress={handleDeleteStudentID} />
+                <View style={{ height: 16 }} />
+            </View>
+            <View style={{ height: 32 }} />
+            <View style={{width: '100%', maxWidth: 400}}>
+                <Button title="Logout" onPress={handleLogout} />
             </View>
         </View>
     );
