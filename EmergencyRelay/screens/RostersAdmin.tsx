@@ -79,7 +79,7 @@ export default function RostersAdmin() {
             setError('Error: Please input a name for your class roster');
             console.log('Validation failed: roster name is empty');
             return;
-        } else if (rosters.find(roster => roster.name.trim() === newRosterName.trim())) {
+        } else if (rosters.find(roster => roster.name.trim().toLowerCase() === newRosterName.trim().toLowerCase())) {
             setError('Error: A roster with this name already exists. Please choose a different name.');
             console.log('Validation failed: roster name already exists');
             return;
