@@ -26,6 +26,8 @@ export default function RostersAdmin() {
     const [staffSelectTarget, setStaffSelectTarget] = useState(null);
     const [selectedStaffForAssign, setSelectedStaffForAssign] = useState(null);
     const [selectedStudentsForCreate, setSelectedStudentsForCreate] = useState([]);
+    const [error, setError] = useState(null);
+
     function toggleSelectedStudentForCreate(student) {
         setSelectedStudentsForCreate(prev => {
             const exists = prev.find(s => s.id === student.id);
@@ -73,7 +75,16 @@ export default function RostersAdmin() {
     }
 
     async function handleCreateRoster() {
-        if (!newRosterName) return Alert.alert('Error', 'Roster name required');
+        if (!newRosterName || newRosterName.trim() === '') {
+            setError('Error: Please input a name for your class roster');
+            console.log('Validation failed: roster name is empty');
+            return;
+        } else if (rosters.find(roster => roster.name.trim() === newRosterName.trim())) {
+            setError('Error: A roster with this name already exists. Please choose a different name.');
+            console.log('Validation failed: roster name already exists');
+            return;
+        }
+        setError(null);
         setCreating(true);
         try {
             const r = await createRoster({ name: newRosterName, assignedToEmail: creatingRosterStaff ? creatingRosterStaff.email : undefined });
@@ -113,6 +124,7 @@ export default function RostersAdmin() {
                     <Button title={selectedStudentsForCreate.length > 0 ? `Students: ${selectedStudentsForCreate.length}` : 'Select students (optional)'} onPress={() => openStudentModal()} />
                     <View style={{ width: 8 }} />
                     <Button title={creating ? 'Creating...' : 'Create Roster'} onPress={handleCreateRoster} />
+                    <Text style={{ color: '#c00', marginLeft: 12 }}>{error}</Text>
                 </View>
             </View>
 
