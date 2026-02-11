@@ -30,10 +30,14 @@ const DashboardStaff = () => {
             <View style={styles.containerBox}>
                 <Text style={styles.title}>Emergency Management</Text>
                 <Text style={styles.caption}>From here you can initiate alerts and your class roster(s)</Text>
+                <View style={{ height: 16 }} />
                 <Button title="Initiate Alert" onPress={handleAlertInitiation} />
                 <View style={{ height: 16 }} />
                 <Button title="View Class Roster" onPress={handleViewClassRoster} />
                 <View style={{ height: 16 }} />
+            </View>
+            <View style={{ height: 32 }} />
+            <View style={{width: '100%', maxWidth: 400}}>
                 <Button title="Logout" onPress={handleLogout} />
             </View>
         </View>
