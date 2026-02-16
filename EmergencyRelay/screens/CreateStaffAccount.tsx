@@ -2,6 +2,8 @@ import {View, Text, TextInput, Button, StyleSheet} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import React, {useState} from 'react';
 import { createUserServer } from '../services/api';
+import { getUsersServer } from '../services/api';
+import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
 
 const CreateStaffAccount = () => {
 
@@ -13,12 +15,12 @@ const CreateStaffAccount = () => {
     const [error, setError] = useState('');
 
     async function handleCreateAccount() {
-        setError('');
-
         if (email.trim() === '' || password.trim() === '') {
             setError('Email and password are required');
             return;
         }
+        //check if user already exists
+        //if (getUsersServer.find(u => u.email === email)) {
 
         setLoading(true);
         try {

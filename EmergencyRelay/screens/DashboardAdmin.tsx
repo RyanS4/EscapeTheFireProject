@@ -11,6 +11,7 @@ const DashboardAdmin = () => {
     function handleAlertInitiation() {
         // Handle alert initiation logic here
         console.log('Alert initiated');
+        (navigation as any).navigate('MapAdmin');
     }   
 
     function handleViewClassRoster() {

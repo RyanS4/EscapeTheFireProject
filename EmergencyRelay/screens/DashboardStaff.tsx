@@ -11,6 +11,7 @@ const DashboardStaff = () => {
     function handleAlertInitiation() {
         // Handle alert initiation logic here
         console.log('Alert initiated');
+        (navigation as any).navigate('MapStaff');
     }   
 
     function handleViewClassRoster() {
