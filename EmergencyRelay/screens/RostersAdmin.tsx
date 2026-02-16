@@ -27,6 +27,7 @@ export default function RostersAdmin() {
     const [selectedStaffForAssign, setSelectedStaffForAssign] = useState(null);
     const [selectedStudentsForCreate, setSelectedStudentsForCreate] = useState([]);
     const [error, setError] = useState(null);
+    const [showBackButton, setShowBackButton] = useState(true);
 
     function toggleSelectedStudentForCreate(student) {
         setSelectedStudentsForCreate(prev => {
@@ -72,6 +73,7 @@ export default function RostersAdmin() {
 
     function openRoster(id) {
         setSelectedRosterId(id);
+        setShowBackButton(false);
     }
 
     async function handleCreateRoster() {
@@ -144,12 +146,12 @@ export default function RostersAdmin() {
 
             {selectedRosterId ? (
                 <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#fff' }}>
-                    <RosterDetail rosterId={selectedRosterId} onClose={() => { setSelectedRosterId(null); loadRosters(); }} />
+                    <RosterDetail rosterId={selectedRosterId} onClose={() => { setSelectedRosterId(null); loadRosters(); setShowBackButton(true); }} />
                 </View>
             ) : null}
 
             {/* Modals: staff and student and confirm delete (reuse patterns) */}
-            <Modal visible={showStaffModal} animationType="slide" onRequestClose={() => setShowStaffModal(false)}>
+            <Modal visible={showStaffModal} animationType="slide" onRequestClose={() => { setShowStaffModal(false); setShowBackButton(false); }}>
                 <View style={{ flex: 1, padding: 16 }}>
                     <Text style={{ fontSize: 18, marginBottom: 12 }}>Select staff</Text>
                     {staffLoading ? <ActivityIndicator /> : (
@@ -159,11 +161,11 @@ export default function RostersAdmin() {
                             </TouchableOpacity>
                         )} />
                     )}
-                    <Button title="Close" onPress={() => setShowStaffModal(false)} />
+                    <Button title="Close" onPress={() => { setShowStaffModal(false); setShowBackButton(true); }} />
                 </View>
             </Modal>
 
-            <Modal visible={showStudentModal} animationType="slide" onRequestClose={() => setShowStudentModal(false)}>
+            <Modal visible={showStudentModal} animationType="slide" onRequestClose={() => { setShowStudentModal(false); setShowBackButton(false); }}>
                 <View style={{ flex: 1, padding: 16 }}>
                     <Text style={{ fontSize: 18, marginBottom: 12 }}>Select student</Text>
                     {studentLoading ? <ActivityIndicator /> : (
@@ -177,7 +179,7 @@ export default function RostersAdmin() {
                     )}
                     <View style={{ height: 12 }} />
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                        <Button title="Done" onPress={() => setShowStudentModal(false)} />
+                        <Button title="Done" onPress={() => { setShowStudentModal(false); setShowBackButton(true); }} />
                         <Button title="Clear selection" onPress={() => setSelectedStudentsForCreate([])} />
                     </View>
                 </View>
@@ -196,8 +198,7 @@ export default function RostersAdmin() {
                     </View>
                 </View>
             </Modal>
-
-            <Button title="Back" onPress={() => navigation.goBack()} />
+            {showBackButton && <Button title="Back" onPress={() => navigation.goBack()} />}
         </View>
     );
 }
