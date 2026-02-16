@@ -8,6 +8,8 @@ import DeleteStudentAccount from './screens/DeleteStudentAccount';
 import RostersAdmin from './screens/RostersAdmin';
 import RostersStaff from './screens/RostersStaff';
 import CreateStudentID from './screens/CreateStudentID';
+import MapAdmin from './screens/MapAdmin';
+import MapStaff from './screens/MapStaff';
 const Stack = createStackNavigator();
 import { NavigationContainer } from '@react-navigation/native';
 import { StyleSheet } from 'react-native';
@@ -30,9 +32,10 @@ function RootNavigator() {
         <Stack.Screen name="DashboardAdmin" component={DashboardAdmin} />
         <Stack.Screen name="CreateStaffAccount" component={CreateStaffAccount} />
         <Stack.Screen name="DeleteStaffAccount" component={DeleteStaffAccount} />
-          <Stack.Screen name="DeleteStudentAccount" component={DeleteStudentAccount} />
+        <Stack.Screen name="DeleteStudentAccount" component={DeleteStudentAccount} />
         <Stack.Screen name="RostersAdmin" component={RostersAdmin} />
         <Stack.Screen name="CreateStudentID" component={CreateStudentID} />
+        <Stack.Screen name="MapAdmin" component={MapAdmin} />
       </Stack.Navigator>
     );
   }
@@ -41,6 +44,7 @@ function RootNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="DashboardStaff" component={DashboardStaff} />
       <Stack.Screen name="RostersStaff" component={RostersStaff} />
+      <Stack.Screen name="MapStaff" component={MapStaff} />
     </Stack.Navigator>
   );
 }
