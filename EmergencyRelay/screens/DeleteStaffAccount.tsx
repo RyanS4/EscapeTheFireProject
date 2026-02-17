@@ -1,3 +1,11 @@
+/**
+ * Developer Notes:
+ * - This admin screen lists staff/admin users from the server.
+ * - It allows deleting user accounts after a confirmation step.
+ * - It depends on admin auth and valid API base URL settings.
+ * - Keep the load and delete flows in sync with backend admin routes.
+ */
+
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, FlatList, StyleSheet, Alert, Modal } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';

@@ -1,3 +1,11 @@
+/**
+ * Developer Notes:
+ * - This screen allows users to create a student ID by entering their first and last name, and optionally picking a photo.
+ * - It uses the createStudentServer function to send the student data to the backend API.
+ * - On successful creation, the user is navigated back to the previous screen.
+ * - Error handling is implemented to provide feedback on failed creation attempts, including common issues like not being signed in or server endpoint problems.
+ */
+
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Button, TextInput, Alert, ActivityIndicator } from "react-native";
 import { useAuth } from "../contexts/AuthContext";

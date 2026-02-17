@@ -1,3 +1,11 @@
+/**
+ * Developer Notes:
+ * - This screen manages rosters and students with server-backed data.
+ * - It supports loading rosters, viewing details, assigning staff, and updating students.
+ * - Admin-only actions are controlled through AuthContext role checks.
+ * - Keep API calls and modal flows in sync with current roster/students endpoints.
+ */
+
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, FlatList, StyleSheet, Image, Switch, TouchableOpacity, ActivityIndicator, Alert, TextInput, Modal, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';

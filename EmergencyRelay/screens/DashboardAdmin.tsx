@@ -1,3 +1,11 @@
+/**
+ * Developer Notes:
+ * - This is the main dashboard for admin users.
+ * - It gives access to alerts, rosters, account management, and student management screens.
+ * - It also lets the admin sign out through AuthContext.
+ * - Update navigation targets here if admin page routes change.
+ */
+
 import {View, Text, TextInput, Button, StyleSheet} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';

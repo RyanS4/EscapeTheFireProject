@@ -1,3 +1,10 @@
+/**
+ * Development notes:
+ * - Every time a new page is created, it must be added to the RootNavigator function in this file with the appropriate permissions (admin, staff, or non-user).
+ * - All pages that a staff member is expected to view should be listed in the staff Stack.Navigator, and all pages that an admin is expected to view should be listed in the admin Stack.Navigator.
+ * - Do not edit the App component unless you know what you're doing, as it sets up important context and navigation for the app.
+ */
+
 import { createStackNavigator } from '@react-navigation/stack';
 import Login from './screens/Login';
 import DashboardStaff from './screens/DashboardStaff';
@@ -26,7 +33,7 @@ function RootNavigator() {
     );
   }
 
-  if (isAdmin()) { // Permissions for pages admin can view
+  if (isAdmin()) { // Permissions for pages admin can view (all pages an admin is expected to view should be listed here)
     return (
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="DashboardAdmin" component={DashboardAdmin} />
@@ -40,7 +47,7 @@ function RootNavigator() {
     );
   }
 
-  return (  // Permissions for pages staff can view
+  return (  // Permissions for pages staff can view (all pages a staff member is expected to view should be listed here)
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="DashboardStaff" component={DashboardStaff} />
       <Stack.Screen name="RostersStaff" component={RostersStaff} />
@@ -49,7 +56,7 @@ function RootNavigator() {
   );
 }
 
-export default function App() {
+export default function App() {  // Main app component that sets up navigation and authentication context (do not edit unless you know what you're doing)
   return (
     <NavigationContainer>
       <AuthProvider>
@@ -59,11 +66,3 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

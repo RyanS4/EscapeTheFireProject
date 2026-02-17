@@ -1,6 +1,14 @@
-// contexts/AuthContext.js
+/**
+ * Developer Notes:
+ * - This file manages login state for the whole app.
+ * - It signs users in with the server, stores the logged-in user, and signs users out.
+ * - It checks if the logged-in user is an admin so App.js can show the correct screens.
+ * - It also sets the API base URL for emulator/device testing when needed.
+ * - Keep this file stable, because many screens depend on it.
+ */
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { fakeLogin, fakeGetMe, loginServer, getMeServer, clearTokens, setTokens, setApiBaseUrl, getAccessToken, getApiBaseUrl } from '../services/api';
+import { loginServer, getMeServer, clearTokens, setTokens, setApiBaseUrl, getAccessToken, getApiBaseUrl } from '../services/api';
 import { Platform } from 'react-native';
 
 const AuthContext = createContext(null);
@@ -8,12 +16,9 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  // By default do NOT fall back to the in-memory fake auth when the server is unreachable.
-  // Set this to true only for offline development convenience.
-  const ALLOW_FAKE_FALLBACK = false;
 
 
-  // optional: try to restore session on mount (calls fakeGetMe)
+  // optional: try to restore session on mount
   useEffect(() => {
     let mounted = true;
     async function init() {
@@ -30,22 +35,10 @@ export function AuthProvider({ children }) {
         // ignore
       }
       try {
-        // try server first
-        let me = null;
-        try {
-          me = await getMeServer();
-        } catch (e) {
-          // server call failed (network/server error)
-          if (!ALLOW_FAKE_FALLBACK) {
-            console.warn('[Auth] getMeServer failed and fake fallback disabled:', e && e.message);
-          }
-        }
-        if (!me && ALLOW_FAKE_FALLBACK) {
-          me = await fakeGetMe();
-        }
+        const me = await getMeServer();
         if (mounted && me) setUser(me);
       } catch (e) {
-        // ignore
+        console.warn('[Auth] getMeServer failed:', e && e.message);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -55,7 +48,6 @@ export function AuthProvider({ children }) {
   }, []);
 
   async function signIn(email, password) {
-    // try server login first
     try {
       const res = await loginServer(email, password);
       // loginServer now returns { token, user }
@@ -72,14 +64,6 @@ export function AuthProvider({ children }) {
       if (e && (e.status === 401 || e.status === 400)) {
         throw e; // authentication failed
       }
-      // For other errors (network, 5xx, etc.), only fallback to fake login when allowed by config.
-      if (ALLOW_FAKE_FALLBACK) {
-        console.warn('[Auth] server login failed, falling back to fake login:', e && e.message);
-        const u = await fakeLogin(email, password);
-        setUser(u);
-        return u;
-      }
-      // otherwise rethrow so the UI can show a network/server error
       throw e;
     }
   }

@@ -1,3 +1,11 @@
+/**
+ * Developer Notes:
+ * - This screen is the admin map view used during alerts.
+ * - It currently shows a placeholder map area and a back button.
+ * - The back button returns to the previous admin screen.
+ * - Replace the placeholder box when real map integration is added.
+ */
+
 import {View, Text, TextInput, Button, StyleSheet} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';

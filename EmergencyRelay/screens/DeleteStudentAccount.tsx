@@ -1,3 +1,11 @@
+/**
+ * Developer Notes:
+ * - This admin screen lists students from the server.
+ * - It allows deleting student records after a confirmation step.
+ * - It requires admin auth and a valid API base URL.
+ * - Keep this page aligned with the backend students delete endpoint.
+ */
+
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, FlatList, StyleSheet, Alert, Modal } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';

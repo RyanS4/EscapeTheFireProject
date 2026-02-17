@@ -31,40 +31,6 @@ export async function apiFetch(path, opts = {}) {
   return res.json();
 }
 
-export async function fakeLogin(username, password) {
-  // Simple dev-only behavior:
-  // admin/admin -> admin role
-  // anything else non-empty -> staff role
-  // accept an email or a short username for dev convenience
-  const email = username;
-  if (!email || !password) {
-    const err = new Error('Missing credentials');
-    err.status = 400;
-    throw err;
-  }
-  if (email === 'admin' || email === 'admin@example.com') {
-    // pretend tokens
-    setTokens({ access: 'fake-admin-access', refresh: 'fake-admin-refresh' });
-    return { id: '1', email: 'admin@example.com', roles: ['admin'], status: 'active' };
-  }
-  // normal staff
-  setTokens({ access: 'fake-staff-access', refresh: 'fake-staff-refresh' });
-  // if caller passed a full email, keep it; otherwise append @example.com
-  const outEmail = email.includes('@') ? email : `${email}@example.com`;
-  return { id: '2', email: outEmail, roles: ['staff'], status: 'active' };
-}
-
-export async function fakeGetMe() {
-  // return user based on current fake token
-  if (accessToken === 'fake-admin-access') {
-    return { id: '1', email: 'admin@example.com', roles: ['admin'], status: 'active' };
-  }
-  if (accessToken === 'fake-staff-access') {
-    return { id: '2', email: 'staff@example.com', roles: ['staff'], status: 'active' };
-  }
-  return null;
-}
-
 // --- live server helpers ---
 // The API base can come from several places (in order):
 // 1) runtime call to setApiBaseUrl(url)

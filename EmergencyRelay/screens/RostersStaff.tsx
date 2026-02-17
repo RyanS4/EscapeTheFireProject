@@ -1,3 +1,11 @@
+/**
+ * Developer Notes:
+ * - This screen shows rosters assigned to the signed-in staff user.
+ * - It loads roster data from the server and filters by assigned staff id.
+ * - Staff can open roster details for the classes they are assigned to.
+ * - Keep this page focused on staff-only roster viewing behavior.
+ */
+
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';

@@ -1,3 +1,11 @@
+/**
+ * Developer Notes:
+ * - This screen is the entry point for users to log in to the app.
+ * - It uses the AuthContext to handle authentication logic.
+ * - On successful login, the user is navigated to the appropriate dashboard based on their role.
+ * - Empty usernames and passwords and used usernames are handled with error messages.
+ */
+
 import {View, Text, TextInput, Button, StyleSheet, Image} from 'react-native';
 import React, {useState} from 'react';
 import { useNavigation } from '@react-navigation/native';
@@ -10,7 +18,7 @@ const Login = () => {
   const { signIn, getAccessToken } = useAuth();
   const [error, setError] = useState('');
 
-  const handleLogin = async () => {
+  const handleLogin = async () => { // Handle login button press, navigate to appropriate dashboard on success, show error on failure
   try {
     setError('');
     await signIn(email, password);
@@ -25,7 +33,7 @@ const Login = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Emergency Management</Text>
-      <TextInput
+      <TextInput // Email input field
         style={styles.input}
         placeholder="Email"
         autoCapitalize="none"
@@ -33,15 +41,15 @@ const Login = () => {
         value={email}
         onChangeText={setEmail}
       />
-      <TextInput
+      <TextInput // Password input field
         style={styles.input}
         placeholder="Password"
         value={password}
         onChangeText={setPassword}
-        secureTextEntry
+        secureTextEntry // hides the password input
       />
       <Button title="Login" onPress={handleLogin} />
-      <Text style={styles.error}>{error}</Text>
+      <Text style={styles.error}>{error}</Text> 
   <Image style={styles.logo} source={require('../assets/BoysAndGirlsClubLogo.png')} />
     </View>
   );

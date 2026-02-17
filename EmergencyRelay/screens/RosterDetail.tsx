@@ -1,3 +1,11 @@
+/**
+ * Developer Notes:
+ * - This screen shows one roster and its students.
+ * - It supports loading roster details, adding/removing students, and assigning staff.
+ * - Some actions are admin-only and depend on AuthContext role checks.
+ * - Keep API calls here consistent with roster and student backend routes.
+ */
+
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, FlatList, StyleSheet, Image, Switch, TouchableOpacity, ActivityIndicator, Alert, TextInput, Modal } from 'react-native';
 import { getRoster, addStudentToRoster, updateStudentInRoster, getStudentsServer, deleteStudentFromRoster, getUsersServer, assignRoster } from '../services/api';

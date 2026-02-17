@@ -1,3 +1,11 @@
+/**
+ * Developer Notes:
+ * - This is the main dashboard for staff users.
+ * - It links staff to the alert map and their assigned rosters.
+ * - It also lets staff sign out through AuthContext.
+ * - Update navigation targets here if staff page routes change.
+ */
+
 import {View, Text, TextInput, Button, StyleSheet} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';

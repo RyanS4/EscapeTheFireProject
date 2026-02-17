@@ -1,3 +1,11 @@
+/**
+ * Developer Notes:
+ * - This is the admin roster management screen.
+ * - Admins can create rosters, assign staff, view roster details, and delete rosters.
+ * - It pulls users and students from the server to support assignment and roster setup.
+ * - Keep this screen admin-only and aligned with backend roster APIs.
+ */
+
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, FlatList, StyleSheet, Image, Switch, TouchableOpacity, ActivityIndicator, Alert, TextInput, Modal, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
