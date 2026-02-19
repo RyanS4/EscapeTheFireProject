@@ -1,7 +1,6 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const bodyParser = require('body-parser');
 const crypto = require('crypto');
 
 // Use a lightweight pure-JS embedded DB to avoid native build issues.
@@ -58,7 +57,7 @@ function verifyPassword(password, stored) {
 const app = express();
 const cors = require('cors');
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
 
 // Initialize DB (NeDB) and migrate JSON data
 const db = openDb();
@@ -468,4 +467,13 @@ app.delete('/rosters/:id', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`server listening ${PORT}`));
+const server = app.listen(PORT, () => console.log(`server listening ${PORT}`));
+
+server.on('error', (err) => {
+  if (err && err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Stop the existing process or run with PORT=<new_port> npm start.`);
+    process.exit(1);
+  }
+  console.error('Server failed to start:', err && err.message ? err.message : err);
+  process.exit(1);
+});
