@@ -148,13 +148,37 @@ function getBase(override) {
   return base.replace(/\/$/, '');
 }
 
+function alternateLocalPortBase(base) {
+  const normalized = String(base || '').replace(/\/$/, '');
+  if (normalized.includes('localhost:5000')) return normalized.replace('localhost:5000', 'localhost:5001');
+  if (normalized.includes('localhost:5001')) return normalized.replace('localhost:5001', 'localhost:5000');
+  if (normalized.includes('10.0.2.2:5000')) return normalized.replace('10.0.2.2:5000', '10.0.2.2:5001');
+  if (normalized.includes('10.0.2.2:5001')) return normalized.replace('10.0.2.2:5001', '10.0.2.2:5000');
+  return null;
+}
+
+async function fetchWithLocalPortFallback(base, path, options) {
+  const primaryBase = String(base || '').replace(/\/$/, '');
+  try {
+    return { response: await fetch(`${primaryBase}${path}`, options), baseUsed: primaryBase };
+  } catch (e) {
+    const alt = alternateLocalPortBase(primaryBase);
+    if (!alt) throw e;
+    const response = await fetch(`${alt}${path}`, options);
+    DEFAULT_BASE = alt;
+    console.info(`[api] switched API base to ${alt} after fallback`);
+    return { response, baseUsed: alt };
+  }
+}
+
 export async function loginServer(email, password, baseUrl) {
   const base = getBase(baseUrl);
-  const res = await fetch(`${base}/auth/login`, {
+  const { response: res, baseUsed } = await fetchWithLocalPortFallback(base, '/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
+  DEFAULT_BASE = baseUsed;
   if (!res.ok) {
     const txt = await res.text();
     const err = new Error(`Login failed: ${res.status} ${txt}`);
@@ -172,10 +196,11 @@ export async function getMeServer(baseUrl) {
   // require accessToken to be set
   if (!accessToken) return null;
   const base = getBase(baseUrl);
-  const res = await fetch(`${base}/auth/me`, {
+  const { response: res, baseUsed } = await fetchWithLocalPortFallback(base, '/auth/me', {
     method: 'GET',
     headers: { Authorization: `Bearer ${accessToken}` },
   });
+  DEFAULT_BASE = baseUsed;
   if (!res.ok) {
     return null;
   }
