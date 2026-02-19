@@ -22,6 +22,10 @@
       },
       "edgeToEdgeEnabled": true
     },
+    "extra": {
+      "API_BASE": "http://localhost:5000",
+      "API_BASE_ANDROID": "http://10.0.2.2:5000"
+    },
     "web": {
       "favicon": "./assets/BoysAndGirlsClubLogoNotClear.png"
     }

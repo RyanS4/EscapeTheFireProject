@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, FlatList, StyleSheet, Alert, Modal } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
-import { getUsersServer, deleteUserServer, setApiBaseUrl, getApiBaseUrl } from '../services/api';
+import { getUsersServer, deleteUserServer, getApiBaseUrl } from '../services/api';
 import { useNavigation } from '@react-navigation/native';
 
 export default function DeleteStaffAccount() {
@@ -15,11 +15,6 @@ export default function DeleteStaffAccount() {
   const navigation = useNavigation();
 
   useEffect(() => {
-    // ensure there's a reasonable default base so the admin UI works without manual setup
-    if (!getApiBaseUrl()) {
-      // default to localhost (works for web and iOS simulator). Android emulator can switch to 10.0.2.2 using the buttons below.
-      setApiBaseUrl('http://localhost:5000');
-    }
     // wait for auth initialization; only load users if we're signed in as admin
     if (authLoading) return;
     try {

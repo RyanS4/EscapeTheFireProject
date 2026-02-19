@@ -69,18 +69,58 @@ export async function fakeGetMe() {
 // The API base can come from several places (in order):
 // 1) runtime call to setApiBaseUrl(url)
 // 2) Expo app config `extra.API_BASE` (available via expo-constants)
-// 3) if none of the above are set, callers will get a helpful error so tests don't silently call the wrong host.
+// 3) Expo app config `extra.API_BASE_ANDROID` when running on Android
+// 4) EXPO_PUBLIC_API_BASE environment variable
+// 5) development fallback (localhost / 10.0.2.2)
 let DEFAULT_BASE = null;
+let warnedFallback = false;
+
+function readExpoExtra() {
+  try {
+    const Constants = require('expo-constants');
+    return (Constants && Constants.expoConfig && Constants.expoConfig.extra)
+      || (Constants && Constants.manifest && Constants.manifest.extra)
+      || (Constants && Constants.manifest2 && Constants.manifest2.extra)
+      || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function detectPlatform() {
+  try {
+    const rn = require('react-native');
+    return rn && rn.Platform ? rn.Platform.OS : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function getDevFallbackBase() {
+  const platform = detectPlatform();
+  if (platform === 'android') return 'http://10.0.2.2:5000';
+  return 'http://localhost:5000';
+}
 
 // try to read from Expo Constants (app.json/app.config.extra) when available
-try {
-  // require at runtime so this module can still be used in non-expo/test environments
-  const Constants = require('expo-constants');
-  if (Constants && Constants.manifest && Constants.manifest.extra && Constants.manifest.extra.API_BASE) {
-    DEFAULT_BASE = Constants.manifest.extra.API_BASE;
+const extra = readExpoExtra();
+if (extra) {
+  const platform = detectPlatform();
+  if (platform === 'android' && extra.API_BASE_ANDROID) {
+    DEFAULT_BASE = extra.API_BASE_ANDROID;
+  } else if (extra.API_BASE) {
+    DEFAULT_BASE = extra.API_BASE;
   }
-} catch (e) {
-  // ignore if expo-constants isn't available (e.g., running tests)
+}
+
+if (!DEFAULT_BASE) {
+  try {
+    if (typeof process !== 'undefined' && process.env && process.env.EXPO_PUBLIC_API_BASE) {
+      DEFAULT_BASE = process.env.EXPO_PUBLIC_API_BASE;
+    }
+  } catch (e) {
+    // ignore if process/env is not available
+  }
 }
 
 export function setApiBaseUrl(url) {
@@ -96,9 +136,14 @@ export function getApiBaseUrl() {
 }
 
 function getBase(override) {
-  const base = override || DEFAULT_BASE;
+  let base = override || DEFAULT_BASE;
   if (!base) {
-    throw new Error('API base URL not configured — call setApiBaseUrl(url) or set `extra.API_BASE` in app config');
+    base = getDevFallbackBase();
+    DEFAULT_BASE = base;
+    if (!warnedFallback) {
+      warnedFallback = true;
+      console.warn(`[api] API base not configured; using development fallback ${base}`);
+    }
   }
   return base.replace(/\/$/, '');
 }
