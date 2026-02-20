@@ -138,6 +138,8 @@ function ensureConfigLoaded() {
     const platform = detectPlatform();
     if (platform === 'android' && extra.API_BASE_ANDROID) {
       DEFAULT_BASE = extra.API_BASE_ANDROID;
+    } else if (platform === 'web' && extra.API_BASE_WEB) {
+      DEFAULT_BASE = extra.API_BASE_WEB;
     } else if (extra.API_BASE) {
       DEFAULT_BASE = extra.API_BASE;
     }
