@@ -93,7 +93,7 @@ export default function RosterDetail({ rosterId, onClose }) {
     }
 
     return (
-        <View style={{ flex: 1 }}>
+        <View style={styles.container}>
             <View style={{ padding: 8, flexDirection: 'row', alignItems: 'center' }}>
                 {(isAdmin && isAdmin()) || (selectedRoster && user && selectedRoster.assignedTo === user.id) ? (
                     <>
@@ -171,6 +171,22 @@ export default function RosterDetail({ rosterId, onClose }) {
 }
 
 const styles = StyleSheet.create({
-    row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderColor: '#eee' },
-    avatar: { width: 48, height: 48, borderRadius: 24, marginRight: 12 },
+    row: { 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        paddingVertical: 8, 
+        borderBottomWidth: 1, 
+        borderColor: '#eee' 
+    },
+     avatar: { 
+        width: 48, 
+        height: 48, 
+        borderRadius: 24, 
+        marginRight: 12 
+    },
+    container: {
+        flex: 1,
+        justifyContent: 'center',
+        padding: 16,
+    }
 });

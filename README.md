@@ -1,12 +1,12 @@
 # EmergencyRelay
 
-This README explains how to run the local backend and the Expo React Native app, how to test the login flow, and a few troubleshooting tips.
+Emergency relay app for Boys and Girls Club staff to manage student rosters during evacuations.
 
 ## ID for Staff testing:
 
 - Email: `A`
 - Password: `A`
-  
+
 ## ID for Admin testing:
 
 - Email: `B`
@@ -16,74 +16,160 @@ This README explains how to run the local backend and the Expo React Native app,
 
 ## Prerequisites
 
-- Node.js (v18+ recommended, Node 24 works too)
+- Node.js (v18+)
 - npm
-- Expo CLI (optional: `npm install -g expo-cli`, but `npx expo` works fine)
-- Android or iOS emulator / physical device for mobile testing
+- Expo Go app on your phone (for mobile testing)
+- ngrok account (free tier works) - https://ngrok.com
 
-## Install dependencies
+## Quick Start
 
-From the project root (this repo):
+### 1. Install Dependencies
 
 ```bash
-# install client deps (root expo app)
+# Install app dependencies
 npm install
 
-# install server deps
-cd server
-npm install
-cd ..
+# Install server dependencies
+cd server && npm install && cd ..
 ```
 
-If `npm start` inside `server` later complains about a missing package (e.g., `cors`), run `npm install cors` inside the `server` folder.
-
-## Start the backend server
-
-Open a terminal and run:
+### 2. Start the Server
 
 ```bash
 cd server
 npm start
 ```
 
-The server listens on port `5000` by default. It uses a simple JSON file at `server/data/users.json` for user storage (development only).
+Server runs on `http://localhost:5000`
 
-## Start the Expo app (client)
+---
 
-From the project root:
+## Running Options
+
+### Option A: Web Development (localhost only)
+
+Best for quick testing in browser.
+
+**Terminal 1 - Server:**
+
+```bash
+cd server && npm start
+```
+
+**Terminal 2 - App:**
+
+```bash
+npm run web
+```
+
+Opens at `http://localhost:8081`
+
+---
+
+### Option B: Android Emulator
+
+**Terminal 1 - Server:**
+
+```bash
+cd server && npm start
+```
+
+**Terminal 2 - App:**
+
+```bash
+npm run start:local
+```
+
+Press `a` to open in Android emulator.
+
+---
+
+### Option C: iOS/Android Phone (requires ngrok)
+
+Use this when testing on a physical phone or when on restricted networks (eduroam, corporate WiFi).
+
+**Terminal 1 - Server:**
+
+```bash
+cd server && npm start
+```
+
+**Terminal 2 - ngrok:**
+
+```bash
+ngrok http 5000
+```
+
+Copy the HTTPS URL (e.g., `https://abc123.ngrok-free.dev`)
+
+**Terminal 3 - Update config and start app:**
+
+Edit `app.json` and set the ngrok URL:
+
+```json
+"extra": {
+  "API_BASE": "https://abc123.ngrok-free.dev",
+  "API_BASE_ANDROID": "https://abc123.ngrok-free.dev"
+}
+```
+
+Then start Expo:
 
 ```bash
 npx expo start -c
 ```
 
-Then run the app on your target:
+Scan QR code with:
 
-- Press `a` to open on the Android emulator (or use the Expo app on your phone)
-- Press `i` to open on the iOS simulator
-- Open in web (browser) with `w` (Expo web)
+- **iOS:** Camera app → tap notification
+- **Android:** Expo Go app → scan QR
 
-## Important: API base URL and emulators/devices
+**Note:** Free ngrok gives a new URL each restart. Update `app.json` accordingly.
 
-The client by default targets `http://localhost:5000`. That works for web and iOS simulator. For Android emulator you typically must use `http://10.0.2.2:5000` (the emulator's host gateway). For a physical phone use your computer LAN IP, e.g. `http://192.168.1.100:5000`.
+---
 
-To update the API base at runtime, your app exposes `configureApiBase(url)` through the `useAuth()` hook. Example use in any component:
+## Project Structure
 
-```js
-const { configureApiBase } = useAuth();
-configureApiBase("http://10.0.2.2:5000");
 ```
-## Create a new user (admin endpoint)
+EmergencyRelay/
+├── App.js              # Main app entry
+├── app.json            # Expo config (API URLs here)
+├── screens/            # UI screens
+├── contexts/           # React contexts (auth)
+├── services/           # API client
+├── models/             # Data models
+└── server/             # Backend API
+    ├── src/index.js    # Express server
+    └── data/           # NeDB database files
+```
 
-You can create users from the command line (development only):
+## Default Accounts
+
+Create accounts via the admin dashboard after first login, or seed directly in `server/data/users.db`.
+
+## Troubleshooting
+
+### "Network request failed" on phone
+
+- Make sure server is running
+- Make sure ngrok is running and URL in `app.json` matches
+- First request through free ngrok may show a "Visit Site" page - tap through it
+
+### "Port 5000 already in use"
 
 ```bash
-curl -i -X POST http://localhost:5000/admin/users/create \
-  -H "Content-Type: application/json" \
-  -d '{"email":"newstaff@example.com","password":"MyNewPass1!","roles":["staff"]}'
+# Find process
+lsof -ti tcp:5000
+# Kill it
+kill -9 $(lsof -ti tcp:5000)
+# Or use different port
+PORT=5001 npm start
 ```
 
-Or as an admin inside the app use the Create Staff Account screen — it now posts to the server's admin endpoint.
+### Config not updating
 
-## Where user data is stored (dev)
+Clear Expo cache:
 
-`server/data/users.json` contains the user records (passwords are hashed). This file is for development only — in production you'd use a real database.
+```bash
+npx expo start -c
+```

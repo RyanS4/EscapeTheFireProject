@@ -121,6 +121,17 @@ function ensureConfigLoaded() {
   if (configChecked) return;
   configChecked = true;
   
+  // Priority: 1) Env var override 2) app.json config 3) fallback
+  // Check env var first so start:local can override app.json
+  try {
+    if (typeof process !== 'undefined' && process.env && process.env.EXPO_PUBLIC_API_BASE) {
+      DEFAULT_BASE = process.env.EXPO_PUBLIC_API_BASE;
+      return; // env var takes priority, skip app.json
+    }
+  } catch (e) {
+    // ignore if process/env is not available
+  }
+
   // try to read from Expo Constants (app.json/app.config.extra) when available
   const extra = readExpoExtra();
   if (extra) {
@@ -129,16 +140,6 @@ function ensureConfigLoaded() {
       DEFAULT_BASE = extra.API_BASE_ANDROID;
     } else if (extra.API_BASE) {
       DEFAULT_BASE = extra.API_BASE;
-    }
-  }
-
-  if (!DEFAULT_BASE) {
-    try {
-      if (typeof process !== 'undefined' && process.env && process.env.EXPO_PUBLIC_API_BASE) {
-        DEFAULT_BASE = process.env.EXPO_PUBLIC_API_BASE;
-      }
-    } catch (e) {
-      // ignore if process/env is not available
     }
   }
 }

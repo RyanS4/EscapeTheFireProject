@@ -23,8 +23,8 @@
       "edgeToEdgeEnabled": true
     },
     "extra": {
-      "API_BASE": "http://172.20.10.5:5000",
-      "API_BASE_ANDROID": "http://10.0.2.2:5000"
+      "API_BASE": "https://polynuclear-suzann-hyperemotional.ngrok-free.dev",
+      "API_BASE_ANDROID": "https://polynuclear-suzann-hyperemotional.ngrok-free.dev"
     },
     "web": {
       "favicon": "./assets/BoysAndGirlsClubLogoNotClear.png"
