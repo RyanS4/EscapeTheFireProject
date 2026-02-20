@@ -94,11 +94,6 @@ export default function RosterDetail({ rosterId, onClose }) {
 
     return (
         <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 8 }}>
-                <Text style={{ fontSize: 20 }}>{selectedRoster ? selectedRoster.name : 'Loading roster...'}</Text>
-                {onClose ? <Button title="Close" onPress={onClose} /> : null}
-            </View>
-
             <View style={{ padding: 8, flexDirection: 'row', alignItems: 'center' }}>
                 {(isAdmin && isAdmin()) || (selectedRoster && user && selectedRoster.assignedTo === user.id) ? (
                     <>
@@ -167,6 +162,10 @@ export default function RosterDetail({ rosterId, onClose }) {
                     <Button title="Close" onPress={() => setShowStaffModal(false)} />
                 </View>
             </Modal>
+            <View style={{alignItems: 'center', padding: 8 }}>
+                <Text style={{ fontSize: 20 }}>{selectedRoster ? selectedRoster.name : 'Loading roster...'}</Text>
+                {onClose ? <Button title="Close" onPress={onClose} /> : null}
+            </View>
         </View>
     );
 }

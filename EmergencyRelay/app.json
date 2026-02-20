@@ -23,7 +23,7 @@
       "edgeToEdgeEnabled": true
     },
     "extra": {
-      "API_BASE": "http://172.25.100.226:5000",
+      "API_BASE": "http://172.20.10.5:5000",
       "API_BASE_ANDROID": "http://10.0.2.2:5000"
     },
     "web": {
