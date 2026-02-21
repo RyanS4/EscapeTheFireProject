@@ -71,18 +71,22 @@ export async function fakeGetMe() {
 // 2) Expo app config `extra.API_BASE` (available via expo-constants)
 // 3) Expo app config `extra.API_BASE_ANDROID` when running on Android
 // 4) EXPO_PUBLIC_API_BASE environment variable
-// 5) development fallback (localhost / 10.0.2.2)
+// 5) development fallback (localhost / 10.0.2.2 / detected IP)
 let DEFAULT_BASE = null;
 let warnedFallback = false;
+let configChecked = false;
 
 function readExpoExtra() {
   try {
-    const Constants = require('expo-constants');
-    return (Constants && Constants.expoConfig && Constants.expoConfig.extra)
-      || (Constants && Constants.manifest && Constants.manifest.extra)
-      || (Constants && Constants.manifest2 && Constants.manifest2.extra)
+    const Constants = require('expo-constants').default || require('expo-constants');
+    // Try multiple paths since Expo SDK versions differ
+    const extra = (Constants.expoConfig && Constants.expoConfig.extra)
+      || (Constants.manifest && Constants.manifest.extra)
+      || (Constants.manifest2 && Constants.manifest2.extra)
       || null;
+    return extra;
   } catch (e) {
+    console.warn('[api] Failed to read expo-constants:', e && e.message);
     return null;
   }
 }
@@ -99,32 +103,52 @@ function detectPlatform() {
 function getDevFallbackBase() {
   const platform = detectPlatform();
   if (platform === 'android') return 'http://10.0.2.2:5000';
+  // For iOS/web, try to extract host from Expo's manifest URL
+  try {
+    const Constants = require('expo-constants').default || require('expo-constants');
+    const hostUri = Constants.expoConfig?.hostUri || Constants.manifest?.hostUri || Constants.manifest2?.extra?.expoGo?.debuggerHost;
+    if (hostUri) {
+      const host = hostUri.split(':')[0];
+      if (host && host !== 'localhost') {
+        return `http://${host}:5000`;
+      }
+    }
+  } catch (e) { /* ignore */ }
   return 'http://localhost:5000';
 }
 
-// try to read from Expo Constants (app.json/app.config.extra) when available
-const extra = readExpoExtra();
-if (extra) {
-  const platform = detectPlatform();
-  if (platform === 'android' && extra.API_BASE_ANDROID) {
-    DEFAULT_BASE = extra.API_BASE_ANDROID;
-  } else if (extra.API_BASE) {
-    DEFAULT_BASE = extra.API_BASE;
-  }
-}
-
-if (!DEFAULT_BASE) {
+function ensureConfigLoaded() {
+  if (configChecked) return;
+  configChecked = true;
+  
+  // Priority: 1) Env var override 2) app.json config 3) fallback
+  // Check env var first so start:local can override app.json
   try {
     if (typeof process !== 'undefined' && process.env && process.env.EXPO_PUBLIC_API_BASE) {
       DEFAULT_BASE = process.env.EXPO_PUBLIC_API_BASE;
+      return; // env var takes priority, skip app.json
     }
   } catch (e) {
     // ignore if process/env is not available
+  }
+
+  // try to read from Expo Constants (app.json/app.config.extra) when available
+  const extra = readExpoExtra();
+  if (extra) {
+    const platform = detectPlatform();
+    if (platform === 'android' && extra.API_BASE_ANDROID) {
+      DEFAULT_BASE = extra.API_BASE_ANDROID;
+    } else if (platform === 'web' && extra.API_BASE_WEB) {
+      DEFAULT_BASE = extra.API_BASE_WEB;
+    } else if (extra.API_BASE) {
+      DEFAULT_BASE = extra.API_BASE;
+    }
   }
 }
 
 export function setApiBaseUrl(url) {
   DEFAULT_BASE = url;
+  configChecked = true; // skip auto-detection if manually set
 }
 
 export function getAccessToken() {
@@ -132,10 +156,12 @@ export function getAccessToken() {
 }
 
 export function getApiBaseUrl() {
+  ensureConfigLoaded();
   return DEFAULT_BASE;
 }
 
 function getBase(override) {
+  ensureConfigLoaded();
   let base = override || DEFAULT_BASE;
   if (!base) {
     base = getDevFallbackBase();

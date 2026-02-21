@@ -1,89 +1,184 @@
 # EmergencyRelay
 
-This README explains how to run the local backend and the Expo React Native app, how to test the login flow, and a few troubleshooting tips.
+Emergency relay app for Boys and Girls Club staff to manage student rosters during evacuations.
 
-## ID for Staff testing:
+## Test Accounts
 
-- Email: `A`
-- Password: `A`
-  
-## ID for Admin testing:
-
-- Email: `B`
-- Password: `B`
+| Role  | Email | Password |
+| ----- | ----- | -------- |
+| Staff | `A`   | `A`      |
+| Admin | `B`   | `B`      |
 
 ---
 
 ## Prerequisites
 
-- Node.js (v18+ recommended, Node 24 works too)
+- Node.js (v18+)
 - npm
-- Expo CLI (optional: `npm install -g expo-cli`, but `npx expo` works fine)
-- Android or iOS emulator / physical device for mobile testing
+- Expo Go app on your phone (for mobile testing)
 
-## Install dependencies
+## Quick Start
 
-From the project root (this repo):
+### 1. Install Dependencies
 
 ```bash
-# install client deps (root expo app)
+# From the EmergencyRelay folder
+cd EmergencyRelay
+
+# Install app dependencies
 npm install
 
-# install server deps
-cd server
-npm install
-cd ..
+# Install server dependencies
+cd server && npm install && cd ..
 ```
 
-If `npm start` inside `server` later complains about a missing package (e.g., `cors`), run `npm install cors` inside the `server` folder.
-
-## Start the backend server
-
-Open a terminal and run:
+### 2. Start the Server
 
 ```bash
 cd server
 npm start
 ```
 
-The server listens on port `5000` by default. It uses a simple JSON file at `server/data/users.json` for user storage (development only).
+Server runs on `http://localhost:5000`
 
-## Start the Expo app (client)
+---
 
-From the project root:
+## Running Options
 
-```bash
-npx expo start -c
-```
+The app automatically selects the correct API URL based on platform (configured in `app.json` under `extra`):
 
-Then run the app on your target:
+| Platform         | API Base URL            |
+| ---------------- | ----------------------- |
+| Web              | `http://localhost:5000` |
+| Android Emulator | `http://10.0.2.2:5000`  |
+| Physical Device  | Your machine's LAN IP   |
 
-- Press `a` to open on the Android emulator (or use the Expo app on your phone)
-- Press `i` to open on the iOS simulator
-- Open in web (browser) with `w` (Expo web)
+---
 
-## Important: API base URL and emulators/devices
+### Option A: Web Browser
 
-The client by default targets `http://localhost:5000`. That works for web and iOS simulator. For Android emulator you typically must use `http://10.0.2.2:5000` (the emulator's host gateway). For a physical phone use your computer LAN IP, e.g. `http://192.168.1.100:5000`.
+Best for quick testing.
 
-To update the API base at runtime, your app exposes `configureApiBase(url)` through the `useAuth()` hook. Example use in any component:
-
-```js
-const { configureApiBase } = useAuth();
-configureApiBase("http://10.0.2.2:5000");
-```
-## Create a new user (admin endpoint)
-
-You can create users from the command line (development only):
+**Terminal 1 - Server:**
 
 ```bash
-curl -i -X POST http://localhost:5000/admin/users/create \
-  -H "Content-Type: application/json" \
-  -d '{"email":"newstaff@example.com","password":"MyNewPass1!","roles":["staff"]}'
+cd server && npm start
 ```
 
-Or as an admin inside the app use the Create Staff Account screen — it now posts to the server's admin endpoint.
+**Terminal 2 - App:**
 
-## Where user data is stored (dev)
+```bash
+npm run web
+```
 
-`server/data/users.json` contains the user records (passwords are hashed). This file is for development only — in production you'd use a real database.
+Opens at `http://localhost:8081`. No config changes needed — uses `API_BASE_WEB` automatically.
+
+---
+
+### Option B: Android Emulator
+
+**Terminal 1 - Server:**
+
+```bash
+cd server && npm start
+```
+
+**Terminal 2 - App:**
+
+```bash
+npm start
+```
+
+Press `a` to open in Android emulator. No config changes needed — uses `API_BASE_ANDROID` (`http://10.0.2.2:5000`) automatically.
+
+---
+
+### Option C: Physical Phone (Same Network)
+
+Your phone must be on the same WiFi network as your computer.
+
+**Terminal 1 - Server:**
+
+```bash
+cd server && npm start
+```
+
+**Terminal 2 - App:**
+
+```bash
+npm start
+```
+
+Scan the QR code:
+
+- **iOS:** Camera app → tap the Expo notification
+- **Android:** Expo Go app → scan QR
+
+**If the app can't connect:** Update `API_BASE` in `app.json` to your computer's LAN IP:
+
+```bash
+# Find your IP
+hostname -I | awk '{print $1}'   # Linux
+ipconfig getifaddr en0            # macOS
+```
+
+Then set it in `app.json`:
+
+```json
+"extra": {
+  "API_BASE": "http://YOUR_IP:5000",
+  ...
+}
+```
+
+Restart with `npm start -- -c` to clear cache.
+
+---
+
+## Project Structure
+
+```
+EmergencyRelay/
+├── App.js              # Main app entry and navigation
+├── app.json            # Expo config (API URLs configured here)
+├── screens/            # UI screens
+├── contexts/           # React contexts (AuthContext for auth)
+├── services/           # API client (api.js)
+├── models/             # Data models
+└── server/             # Backend API
+    ├── src/index.js    # Express server
+    └── data/           # NeDB data store (users.db, rosters.db, students.db)
+```
+
+## Troubleshooting
+
+### "Network request failed" on phone
+
+- Verify the server is running (`cd server && npm start`)
+- Confirm `API_BASE` in `app.json` is correct for your setup:
+  - Same network: your LAN IP (e.g., `http://192.168.1.42:5000`)
+  - Different network: ngrok URL
+- Ensure your phone can reach the server (try opening the URL in phone browser)
+- First request through free ngrok may show a "Visit Site" page — tap through it
+
+### Android Emulator can't connect
+
+The emulator uses `10.0.2.2` to reach the host machine's localhost. Verify `API_BASE_ANDROID` is set to `http://10.0.2.2:5000` in `app.json`.
+
+### "Port 5000 already in use"
+
+```bash
+# Find and kill the process
+kill -9 $(lsof -ti tcp:5000)
+
+# Or use a different port
+PORT=5001 npm start
+```
+
+### Config changes not taking effect
+
+Clear Expo cache when changing `app.json`:
+
+```bash
+npm start -- -c
+```

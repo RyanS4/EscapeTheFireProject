@@ -24,7 +24,11 @@ export function AuthProvider({ children }) {
         // try server first
         let me = null;
         try {
-          me = await getMeServer();
+          // Add timeout to prevent infinite loading
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('timeout')), 8000)
+          );
+          me = await Promise.race([getMeServer(), timeoutPromise]);
         } catch (e) {
           // server call failed (network/server error)
           if (!ALLOW_FAKE_FALLBACK) {
