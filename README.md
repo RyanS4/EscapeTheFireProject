@@ -182,3 +182,44 @@ Clear Expo cache when changing `app.json`:
 ```bash
 npm start -- -c
 ```
+
+---
+
+## TODO: Implement WiFi-Based User Tracking & Location Mapping
+
+### 1. Collect BSSID(s) for Each Room
+
+- Use your phone (with the app or a WiFi scanner) to walk into each room.
+- Record the WiFi BSSID(s) visible in each room. (BSSID = unique WiFi access point MAC address)
+- Note: Some rooms may have multiple BSSIDs; collect all that are consistently present.
+
+### 2. Map BSSID(s) to Room Names (Admin Only)
+
+- Use the `/admin/bssid-map` endpoint to associate each BSSID with a room name.
+  - Example request:
+    ```json
+    POST /admin/bssid-map
+    {
+      "bssid": "00:11:22:33:44:55",
+      "room": "Art Room"
+    }
+    ```
+- Repeat for each BSSID/room pair.
+
+### 3. Update Client to Report BSSID
+
+- The app will automatically collect the current BSSID using WiFi APIs (see `getConnectedBSSID` in `services/api.js`).
+- On login or location change, the app sends the BSSID to the server to update the user's location.
+
+### 4. Visualize User Locations on Map
+
+- The admin/staff dashboard fetches user locations by room from the server.
+- Update the map UI to highlight rooms and show which users are present (see `MapAdmin.tsx`, `MapStaff.tsx`).
+
+### 5. Tips & Troubleshooting
+
+- If a room has multiple BSSIDs, map all of them to the same room.
+- If a BSSID is visible in multiple rooms, pick the most likely/strongest room or handle as ambiguous.
+- For best accuracy, repeat BSSID collection at different times of day.
+
+---

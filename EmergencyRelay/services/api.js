@@ -1,6 +1,42 @@
 let accessToken = null;
 let refreshToken = null;
 
+// WiFi BSSID collection (cross-platform, requires permissions)
+import { Platform, PermissionsAndroid } from 'react-native';
+let WifiManager;
+try {
+  WifiManager = require('react-native-wifi-reborn').default;
+} catch (e) {
+  WifiManager = null;
+}
+
+/**
+ * Gets the currently connected WiFi BSSID (MAC address).
+ * Returns null if not available or permissions denied.
+ */
+export async function getConnectedBSSID() {
+  if (!WifiManager) return null;
+  if (Platform.OS === 'android') {
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+    );
+    if (granted !== PermissionsAndroid.RESULTS.GRANTED) return null;
+    try {
+      return await WifiManager.getBSSID();
+    } catch (e) {
+      return null;
+    }
+  } else if (Platform.OS === 'ios') {
+    // On iOS, location permission must be granted and app in foreground
+    try {
+      return await WifiManager.getBSSID();
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
+
 export function setTokens(newAccessTokenOrObject, newRefreshToken) {
   // Accept either setTokens(access, refresh) or setTokens({ access, refresh })
   if (newAccessTokenOrObject && typeof newAccessTokenOrObject === 'object' && !newRefreshToken) {
@@ -449,4 +485,24 @@ export async function deleteUserServer(id, baseUrl) {
     throw err;
   }
   return true;
+}
+
+// Send BSSID to server and update user location
+export async function updateUserLocationWithBSSID(bssid, baseUrl) {
+  if (!bssid) throw new Error('No BSSID provided');
+  const url = (baseUrl || getApiBaseUrl()) + '/user/update-location';
+  const headers = { 'Content-Type': 'application/json' };
+  if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ bssid })
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    const err = new Error(`HTTP ${res.status}: ${text}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
 }
