@@ -16,52 +16,38 @@ function openDb() {
   return users;
 }
 
-async function migrateFromJson(users) {
-  const jsonFile = path.join(__dirname, '../data/users.json');
-  try {
-    if (!fs.existsSync(jsonFile)) return;
-    const raw = fs.readFileSync(jsonFile, 'utf8');
-    const rows = JSON.parse(raw || '[]');
-    for (const u of rows) {
-      try {
-        await users.insert({
-          id: u.id,
-          email: u.email,
-          password_hash: u.password_hash,
-          roles: u.roles || ['staff'],
-          status: u.status || 'active',
-          created_at: u.created_at || new Date().toISOString(),
-          session: u.session || null,
-        });
-      } catch (e) {
-        // ignore insert conflict (already migrated)
-      }
-    }
-  } catch (e) {
-    console.warn('Migration from JSON failed:', e && e.message);
-  }
-}
-
-function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const derived = crypto.scryptSync(password, salt, 64);
-  return `${salt}:${derived.toString('hex')}`;
-}
-function verifyPassword(password, stored) {
-  if (!stored) return false;
-  const [salt, hashHex] = stored.split(':');
-  const derived = crypto.scryptSync(password, salt, 64);
-  return crypto.timingSafeEqual(Buffer.from(hashHex, 'hex'), derived);
-}
-
 const app = express();
 const cors = require('cors');
+app.post('/admin/bssid-map', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('admin')) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  const { bssid, room } = req.body;
+  if (!bssid || !room) return res.status(400).json({ error: 'Missing bssid or room' });
+  bssidRoomMap[bssid] = room;
+  return res.json({ success: true });
+});
+
+// Endpoint to update user location by BSSID
+app.post('/user/update-location', async (req, res) => {
+  const auth = req.headers['authorization'];
+  if (!auth) return res.status(401).json({ error: 'no_auth' });
+  const token = auth.replace(/^Bearer\s+/, '');
+  const user = await db.findOne({ session: token });
+  if (!user) return res.status(401).json({ error: 'invalid_session' });
+  const { bssid } = req.body;
+  if (!bssid) return res.status(400).json({ error: 'Missing bssid' });
+  const room = bssidRoomMap[bssid] || null;
+  await db.update({ id: user.id }, { $set: { last_location: { bssid, room, updated: Date.now() } } });
+  return res.json({ room });
+});
 app.use(cors());
 app.use(express.json());
 
 // Initialize DB (NeDB) and migrate JSON data
 const db = openDb();
-(async () => { await migrateFromJson(db); })();
+let bssidRoomMap = {};
 
 // Create a separate NeDB for rosters
 const rostersFile = path.join(DB_DIR, 'rosters.db');
@@ -88,7 +74,14 @@ async function migrateRostersFromJson() {
     console.warn('Migration of rosters from JSON failed', e && e.message);
   }
 }
-(async () => { await migrateRostersFromJson(); })();
+
+function verifyPassword(password, stored) {
+  if (!stored) return false;
+  const [salt, hashHex] = stored.split(':');
+  const derived = crypto.scryptSync(password, salt, 64);
+  return crypto.timingSafeEqual(Buffer.from(hashHex, 'hex'), derived);
+}
+
 
 function makeId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2,8);
