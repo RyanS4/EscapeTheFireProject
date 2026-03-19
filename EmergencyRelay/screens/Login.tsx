@@ -10,8 +10,10 @@ const Login = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false); // 1. New State
   const { signIn } = useAuth();
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
+    setLoading(true);
     try {
       setError('');
       await signIn(email, password);
@@ -20,6 +22,8 @@ const Login = () => {
       if (err && (err.status === 401 || err.status === 400)) setError('Invalid email or password');
       else if (err && err.message) setError(`Login failed: ${err.message}`);
       else setError('Login failed — check your connection or try again');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -36,8 +40,7 @@ const Login = () => {
         onChangeText={setEmail}
       />
 
-      {/* 2. Wrap Password in a Container */}
-      <div style={styles.passwordContainer}>
+      <View style={styles.passwordContainer}>
         <TextInput
           style={[styles.input, { flex: 1, marginBottom: 0 }]} // Adjust style to fit button
           placeholder="Password"
@@ -53,9 +56,9 @@ const Login = () => {
             {isPasswordVisible ? 'Hide' : 'Show'}
           </Text>
         </TouchableOpacity>
-      </div>
+      </View>
 
-      <Button title="Login" onPress={handleLogin} />
+      <Button title="Login" onPress={handleLogin} disabled={loading} />
       <Text style={styles.error}>{error}</Text>
       <Image style={styles.logo} source={require('../assets/BoysAndGirlsClubLogo.png')} />
     </View>

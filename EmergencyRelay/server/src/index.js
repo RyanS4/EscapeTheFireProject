@@ -358,6 +358,16 @@ app.delete('/students/:id', async (req, res) => {
   }
 });
 
+app.post('/auth/logout', async (req, res) => {
+  const auth = req.headers['authorization'];
+  if (!auth) return res.status(401).json({ error: 'no_auth' });
+  const token = auth.replace(/^Bearer\s+/, '');
+  const user = await db.findOne({ session: token });
+  if (!user) return res.status(401).json({ error: 'invalid_session' });
+  await db.update({ id: user.id }, { $set: { session: null } });
+  res.json({ success: true });
+});
+
 // Update a student (toggle accounted or update name/image)
 app.put('/rosters/:id/students/:sid', async (req, res) => {
   const caller = await userFromToken(req);
