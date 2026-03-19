@@ -12,8 +12,12 @@ import MapAdmin from './screens/MapAdmin';
 import MapStaff from './screens/MapStaff';
 const Stack = createStackNavigator();
 import { NavigationContainer } from '@react-navigation/native';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import * as Location from 'expo-location';
+import { PermissionsAndroid } from 'react-native';
+import { useEffect } from 'react';
+
 
 function RootNavigator() {
   const { user, isAdmin } = useAuth();
@@ -49,13 +53,23 @@ function RootNavigator() {
   );
 }
 
+function requestLocationPermission() {
+  useEffect(() => {
+    (async () => {
+      await Location.requestForegroundPermissionsAsync();
+    })();
+  }, []);
+}
+
 export default function App() {
+  requestLocationPermission();
+
   return (
-    <NavigationContainer>
-      <AuthProvider>
+    <AuthProvider>
+      <NavigationContainer>
         <RootNavigator />
-      </AuthProvider>
-    </NavigationContainer>
+      </NavigationContainer>
+    </AuthProvider>
   );
 }
 

@@ -7,7 +7,7 @@ const Login = () => {
   const navigation = useNavigation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false); // 1. New State
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const { signIn } = useAuth();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
