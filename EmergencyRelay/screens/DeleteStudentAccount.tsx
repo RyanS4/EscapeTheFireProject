@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, FlatList, StyleSheet, Alert, Modal } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
-import { getStudentsServer, deleteStudentServer, setApiBaseUrl, getApiBaseUrl } from '../services/api';
+import { getStudentsServer, deleteStudentServer, getApiBaseUrl } from '../services/api';
 import { useNavigation } from '@react-navigation/native';
 
 export default function DeleteStudentAccount() {
@@ -14,7 +14,6 @@ export default function DeleteStudentAccount() {
   const navigation = useNavigation();
 
   useEffect(() => {
-    if (!getApiBaseUrl()) setApiBaseUrl('http://localhost:5000');
     if (authLoading) return;
     try {
       if (isAdmin && isAdmin()) load(); else setLastMessage('You must be signed in as an admin to view this page');

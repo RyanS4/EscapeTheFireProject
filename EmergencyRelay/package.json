@@ -5,14 +5,17 @@
   "main": "index.js",
   "scripts": {
     "start": "expo start",
+    "start:local": "EXPO_PUBLIC_API_BASE=http://localhost:5000 expo start",
+    "start:remote": "expo start --tunnel",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "EXPO_PUBLIC_API_BASE=http://localhost:5000 expo start --web"
   },
   "dependencies": {
-    "@react-navigation/native": "^6.1.6",
+    "@react-navigation/native": "^6.1.18",
     "@react-navigation/stack": "^6.3.16",
     "expo": "~54.0.32",
+    "expo-image-picker": "~17.0.10",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
     "react-dom": "^19.1.0",
@@ -21,8 +24,7 @@
     "react-native-keychain": "^10.0.0",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
-    "react-native-web": "~0.21.0",
-    "expo-image-picker": "~17.0.10"
+    "react-native-web": "~0.21.0"
   },
   "private": true,
   "devDependencies": {

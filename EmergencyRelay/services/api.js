@@ -1,6 +1,42 @@
 let accessToken = null;
 let refreshToken = null;
 
+// WiFi BSSID collection (cross-platform, requires permissions)
+import { Platform, PermissionsAndroid } from 'react-native';
+let WifiManager;
+try {
+  WifiManager = require('react-native-wifi-reborn').default;
+} catch (e) {
+  WifiManager = null;
+}
+
+/**
+ * Gets the currently connected WiFi BSSID (MAC address).
+ * Returns null if not available or permissions denied.
+ */
+export async function getConnectedBSSID() {
+  if (!WifiManager) return null;
+  if (Platform.OS === 'android') {
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+    );
+    if (granted !== PermissionsAndroid.RESULTS.GRANTED) return null;
+    try {
+      return await WifiManager.getBSSID();
+    } catch (e) {
+      return null;
+    }
+  } else if (Platform.OS === 'ios') {
+    // On iOS, location permission must be granted and app in foreground
+    try {
+      return await WifiManager.getBSSID();
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
+
 export function setTokens(newAccessTokenOrObject, newRefreshToken) {
   // Accept either setTokens(access, refresh) or setTokens({ access, refresh })
   if (newAccessTokenOrObject && typeof newAccessTokenOrObject === 'object' && !newRefreshToken) {
@@ -69,22 +105,86 @@ export async function fakeGetMe() {
 // The API base can come from several places (in order):
 // 1) runtime call to setApiBaseUrl(url)
 // 2) Expo app config `extra.API_BASE` (available via expo-constants)
-// 3) if none of the above are set, callers will get a helpful error so tests don't silently call the wrong host.
+// 3) Expo app config `extra.API_BASE_ANDROID` when running on Android
+// 4) EXPO_PUBLIC_API_BASE environment variable
+// 5) development fallback (localhost / 10.0.2.2 / detected IP)
 let DEFAULT_BASE = null;
+let warnedFallback = false;
+let configChecked = false;
 
-// try to read from Expo Constants (app.json/app.config.extra) when available
-try {
-  // require at runtime so this module can still be used in non-expo/test environments
-  const Constants = require('expo-constants');
-  if (Constants && Constants.manifest && Constants.manifest.extra && Constants.manifest.extra.API_BASE) {
-    DEFAULT_BASE = Constants.manifest.extra.API_BASE;
+function readExpoExtra() {
+  try {
+    const Constants = require('expo-constants').default || require('expo-constants');
+    // Try multiple paths since Expo SDK versions differ
+    const extra = (Constants.expoConfig && Constants.expoConfig.extra)
+      || (Constants.manifest && Constants.manifest.extra)
+      || (Constants.manifest2 && Constants.manifest2.extra)
+      || null;
+    return extra;
+  } catch (e) {
+    console.warn('[api] Failed to read expo-constants:', e && e.message);
+    return null;
   }
-} catch (e) {
-  // ignore if expo-constants isn't available (e.g., running tests)
+}
+
+function detectPlatform() {
+  try {
+    const rn = require('react-native');
+    return rn && rn.Platform ? rn.Platform.OS : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function getDevFallbackBase() {
+  const platform = detectPlatform();
+  if (platform === 'android') return 'http://10.0.2.2:5000';
+  // For iOS/web, try to extract host from Expo's manifest URL
+  try {
+    const Constants = require('expo-constants').default || require('expo-constants');
+    const hostUri = Constants.expoConfig?.hostUri || Constants.manifest?.hostUri || Constants.manifest2?.extra?.expoGo?.debuggerHost;
+    if (hostUri) {
+      const host = hostUri.split(':')[0];
+      if (host && host !== 'localhost') {
+        return `http://${host}:5000`;
+      }
+    }
+  } catch (e) { /* ignore */ }
+  return 'http://localhost:5000';
+}
+
+function ensureConfigLoaded() {
+  if (configChecked) return;
+  configChecked = true;
+  
+  // Priority: 1) Env var override 2) app.json config 3) fallback
+  // Check env var first so start:local can override app.json
+  try {
+    if (typeof process !== 'undefined' && process.env && process.env.EXPO_PUBLIC_API_BASE) {
+      DEFAULT_BASE = process.env.EXPO_PUBLIC_API_BASE;
+      return; // env var takes priority, skip app.json
+    }
+  } catch (e) {
+    // ignore if process/env is not available
+  }
+
+  // try to read from Expo Constants (app.json/app.config.extra) when available
+  const extra = readExpoExtra();
+  if (extra) {
+    const platform = detectPlatform();
+    if (platform === 'android' && extra.API_BASE_ANDROID) {
+      DEFAULT_BASE = extra.API_BASE_ANDROID;
+    } else if (platform === 'web' && extra.API_BASE_WEB) {
+      DEFAULT_BASE = extra.API_BASE_WEB;
+    } else if (extra.API_BASE) {
+      DEFAULT_BASE = extra.API_BASE;
+    }
+  }
 }
 
 export function setApiBaseUrl(url) {
   DEFAULT_BASE = url;
+  configChecked = true; // skip auto-detection if manually set
 }
 
 export function getAccessToken() {
@@ -92,24 +192,55 @@ export function getAccessToken() {
 }
 
 export function getApiBaseUrl() {
+  ensureConfigLoaded();
   return DEFAULT_BASE;
 }
 
 function getBase(override) {
-  const base = override || DEFAULT_BASE;
+  ensureConfigLoaded();
+  let base = override || DEFAULT_BASE;
   if (!base) {
-    throw new Error('API base URL not configured — call setApiBaseUrl(url) or set `extra.API_BASE` in app config');
+    base = getDevFallbackBase();
+    DEFAULT_BASE = base;
+    if (!warnedFallback) {
+      warnedFallback = true;
+      console.warn(`[api] API base not configured; using development fallback ${base}`);
+    }
   }
   return base.replace(/\/$/, '');
 }
 
+function alternateLocalPortBase(base) {
+  const normalized = String(base || '').replace(/\/$/, '');
+  if (normalized.includes('localhost:5000')) return normalized.replace('localhost:5000', 'localhost:5001');
+  if (normalized.includes('localhost:5001')) return normalized.replace('localhost:5001', 'localhost:5000');
+  if (normalized.includes('10.0.2.2:5000')) return normalized.replace('10.0.2.2:5000', '10.0.2.2:5001');
+  if (normalized.includes('10.0.2.2:5001')) return normalized.replace('10.0.2.2:5001', '10.0.2.2:5000');
+  return null;
+}
+
+async function fetchWithLocalPortFallback(base, path, options) {
+  const primaryBase = String(base || '').replace(/\/$/, '');
+  try {
+    return { response: await fetch(`${primaryBase}${path}`, options), baseUsed: primaryBase };
+  } catch (e) {
+    const alt = alternateLocalPortBase(primaryBase);
+    if (!alt) throw e;
+    const response = await fetch(`${alt}${path}`, options);
+    DEFAULT_BASE = alt;
+    console.info(`[api] switched API base to ${alt} after fallback`);
+    return { response, baseUsed: alt };
+  }
+}
+
 export async function loginServer(email, password, baseUrl) {
   const base = getBase(baseUrl);
-  const res = await fetch(`${base}/auth/login`, {
+  const { response: res, baseUsed } = await fetchWithLocalPortFallback(base, '/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
+  DEFAULT_BASE = baseUsed;
   if (!res.ok) {
     const txt = await res.text();
     const err = new Error(`Login failed: ${res.status} ${txt}`);
@@ -127,10 +258,11 @@ export async function getMeServer(baseUrl) {
   // require accessToken to be set
   if (!accessToken) return null;
   const base = getBase(baseUrl);
-  const res = await fetch(`${base}/auth/me`, {
+  const { response: res, baseUsed } = await fetchWithLocalPortFallback(base, '/auth/me', {
     method: 'GET',
     headers: { Authorization: `Bearer ${accessToken}` },
   });
+  DEFAULT_BASE = baseUsed;
   if (!res.ok) {
     return null;
   }
@@ -353,4 +485,24 @@ export async function deleteUserServer(id, baseUrl) {
     throw err;
   }
   return true;
+}
+
+// Send BSSID to server and update user location
+export async function updateUserLocationWithBSSID(bssid, baseUrl) {
+  if (!bssid) throw new Error('No BSSID provided');
+  const url = (baseUrl || getApiBaseUrl()) + '/user/update-location';
+  const headers = { 'Content-Type': 'application/json' };
+  if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ bssid })
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    const err = new Error(`HTTP ${res.status}: ${text}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
 }
