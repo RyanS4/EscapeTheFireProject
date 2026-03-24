@@ -14,6 +14,19 @@ const Stack = createStackNavigator();
 import { NavigationContainer } from '@react-navigation/native';
 import { StyleSheet } from 'react-native';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import * as Location from 'expo-location';
+
+async function requestLocationPermission() {
+  let { status } = await Location.requestForegroundPermissionsAsync();
+  if (status !== 'granted') {
+    console.log('Location permission denied');
+    return false;
+  } else {
+    console.log('Location permission granted');
+    return true;
+  }
+}
+
 
 function RootNavigator() {
   const { user, isAdmin } = useAuth();
@@ -28,7 +41,7 @@ function RootNavigator() {
 
   if (isAdmin()) { // Permissions for pages admin can view
     return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={{ headerShown: true }}>
         <Stack.Screen name="DashboardAdmin" component={DashboardAdmin} />
         <Stack.Screen name="CreateStaffAccount" component={CreateStaffAccount} />
         <Stack.Screen name="DeleteStaffAccount" component={DeleteStaffAccount} />
@@ -41,7 +54,7 @@ function RootNavigator() {
   }
 
   return (  // Permissions for pages staff can view
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: true }}>
       <Stack.Screen name="DashboardStaff" component={DashboardStaff} />
       <Stack.Screen name="RostersStaff" component={RostersStaff} />
       <Stack.Screen name="MapStaff" component={MapStaff} />
@@ -49,7 +62,12 @@ function RootNavigator() {
   );
 }
 
+
+
 export default function App() {
+
+  requestLocationPermission();
+
   return (
     <NavigationContainer>
       <AuthProvider>
