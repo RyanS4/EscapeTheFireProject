@@ -20,6 +20,11 @@ const DashboardAdmin = () => {
         (navigation as any).navigate('RostersAdmin');
     }  
 
+    function handleInstructions() {
+        console.log('Navigating to instructions');
+        (navigation as any).navigate('Instructions');
+    }
+
     async function handleLogout() {
         await signOut();
     }
@@ -56,6 +61,8 @@ const DashboardAdmin = () => {
                 <Button title="Initiate Alert" onPress={handleAlertInitiation} />
                 <View style={{ height: 16 }} />
                 <Button title="View Class Roster" onPress={handleViewClassRoster} />
+                <View style={{ height: 16 }} />
+                <Button title="Instructions" onPress={handleInstructions} />
                 <View style={{ height: 16 }} />
             </View>
             <View style={{ height: 32 }} />
