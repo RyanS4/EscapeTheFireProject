@@ -1,10 +1,18 @@
 export type UserRole = 'admin' | 'staff';
 
+// Location tracking structure
+export interface UserLocation {
+  bssid: string;      // WiFi MAC address
+  room?: string;      // Room/zone identified by admin mapping
+  updated: number;    // Timestamp of last update
+}
+
 // Structure of a user object
 export interface User {
   id: string;
   name: string;
   role: UserRole;
+  lastLocation?: UserLocation;  // Current WiFi location
 }
 
 

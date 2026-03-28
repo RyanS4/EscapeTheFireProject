@@ -506,3 +506,43 @@ export async function updateUserLocationWithBSSID(bssid, baseUrl) {
   }
   return res.json();
 }
+
+/**
+ * Fetch all users with their current locations (wifi BSSID and room)
+ * Returns array of users with lastLocation info
+ */
+export async function getUserLocationsServer(baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/users/locations`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`Get user locations failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+/**
+ * Admin: set BSSID to room mapping for location tracking
+ */
+export async function setBSSIDRoomMapping(bssid, room, baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/admin/bssid-map`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ bssid, room }),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`Set BSSID mapping failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}

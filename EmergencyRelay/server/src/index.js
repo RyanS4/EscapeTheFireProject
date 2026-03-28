@@ -192,6 +192,27 @@ app.get('/admin/users', async (req, res) => {
   }
 });
 
+// Get all users with their current locations (any authenticated user can view)
+app.get('/users/locations', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller) return res.status(401).json({ error: 'no_auth' });
+  try {
+    const rows = await db.find({});
+    // include email, roles, and current location info
+    const out = rows.map(r => ({
+      id: r.id,
+      email: r.email,
+      roles: r.roles,
+      status: r.status,
+      lastLocation: r.last_location || null
+    }));
+    res.json(out);
+  } catch (e) {
+    console.error('Get user locations failed', e && e.message);
+    res.status(500).json({ error: 'get_failed' });
+  }
+});
+
 // Rosters endpoints
 // List rosters (requires auth)
 app.get('/rosters', async (req, res) => {
