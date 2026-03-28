@@ -1,6 +1,7 @@
 // contexts/AuthContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { fakeLogin, fakeGetMe, loginServer, getMeServer, clearTokens, setTokens, setApiBaseUrl, getAccessToken, getApiBaseUrl } from '../services/api';
+import { startLocationTracking, stopLocationTracking } from '../services/LocationTracker';
 
 const AuthContext = createContext(null);
 
@@ -59,6 +60,16 @@ export function AuthProvider({ children }) {
       }
       if (res && res.user) {
         setUser(res.user);
+        
+        // Start location tracking after successful login
+        // Track every 5 seconds (5000ms) - adjust interval as needed
+        try {
+          await startLocationTracking(5000);
+          console.log('[Auth] Location tracking started after login');
+        } catch (e) {
+          console.warn('[Auth] Failed to start location tracking:', e && e.message);
+        }
+        
         return res.user;
       }
       return null;
@@ -72,6 +83,12 @@ export function AuthProvider({ children }) {
         console.warn('[Auth] server login failed, falling back to fake login:', e && e.message);
         const u = await fakeLogin(email, password);
         setUser(u);
+        // Also start tracking for fake login
+        try {
+          await startLocationTracking(5000);
+        } catch (e2) {
+          console.warn('[Auth] Failed to start location tracking:', e2 && e2.message);
+        }
         return u;
       }
       // otherwise rethrow so the UI can show a network/server error
@@ -85,6 +102,14 @@ export function AuthProvider({ children }) {
   }
 
   async function signOut() {
+    // Stop location tracking before clearing auth
+    try {
+      stopLocationTracking();
+      console.log('[Auth] Location tracking stopped on sign out');
+    } catch (e) {
+      console.warn('[Auth] Error stopping location tracking:', e && e.message);
+    }
+    
     // clear tokens and user
     clearTokens();
     setUser(null);

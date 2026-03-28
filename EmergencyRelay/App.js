@@ -18,8 +18,9 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import * as Location from 'expo-location';
 
 async function requestLocationPermission() {
-  let { status } = await Location.requestForegroundPermissionsAsync();
-  if (status !== 'granted') {
+  let { foregroundStatus } = await Location.requestForegroundPermissionsAsync();
+  let { backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+  if (foregroundStatus !== 'granted' || backgroundStatus !== 'granted') {
     console.log('Location permission denied');
     return false;
   } else {
