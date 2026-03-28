@@ -37,7 +37,7 @@ const Login = () => {
       />
 
       {/* 2. Wrap Password in a Container */}
-      <div style={styles.passwordContainer}>
+      <View style={styles.passwordContainer}>
         <TextInput
           style={[styles.input, { flex: 1, marginBottom: 0 }]} // Adjust style to fit button
           placeholder="Password"
@@ -53,9 +53,11 @@ const Login = () => {
             {isPasswordVisible ? 'Hide' : 'Show'}
           </Text>
         </TouchableOpacity>
-      </div>
+      </View>
 
       <Button title="Login" onPress={handleLogin} />
+      <View style={{ height: 16 }} />
+      <Button title="Help" onPress={() => (navigation as any).navigate('Instructions')} />
       <Text style={styles.error}>{error}</Text>
       <Image style={styles.logo} source={require('../assets/BoysAndGirlsClubLogo.png')} />
     </View>

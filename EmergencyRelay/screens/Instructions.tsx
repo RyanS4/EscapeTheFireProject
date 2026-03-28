@@ -162,11 +162,11 @@ return (
  
  
 
-{/* BACK BUTTON (navigates to Login) */} 
+{/* BACK BUTTON (navigates to previous screen) */} 
 
 <View style={styles.buttonContainer}> 
 
-<Button title="Back" onPress={() => (navigation as any).navigate('Login')} /> 
+<Button title="Back" onPress={() => (navigation as any).goBack()} /> 
 
 </View> 
 
