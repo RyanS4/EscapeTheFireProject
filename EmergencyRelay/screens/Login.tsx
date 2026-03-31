@@ -37,7 +37,7 @@ const Login = () => {
       />
 
       {/* 2. Wrap Password in a Container */}
-      <div style={styles.passwordContainer}>
+      <View style={styles.passwordContainer}>
         <TextInput
           style={[styles.input, { flex: 1, marginBottom: 0 }]} // Adjust style to fit button
           placeholder="Password"
@@ -53,7 +53,7 @@ const Login = () => {
             {isPasswordVisible ? 'Hide' : 'Show'}
           </Text>
         </TouchableOpacity>
-      </div>
+      </View>
 
       <Button title="Login" onPress={handleLogin} />
       <Text style={styles.error}>{error}</Text>
