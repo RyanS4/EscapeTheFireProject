@@ -546,3 +546,80 @@ export async function setBSSIDRoomMapping(bssid, room, baseUrl) {
   }
   return res.json();
 }
+
+/**
+ * Get all active alerts
+ */
+export async function getActiveAlertsServer(baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/alerts`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`Get alerts failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+/**
+ * Create a new alert (admin only)
+ */
+export async function createAlertServer(alertData, baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/alerts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(alertData),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`Create alert failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+/**
+ * Confirm/resolve an alert (admin only)
+ */
+export async function confirmAlertServer(alertId, baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/alerts/${alertId}/confirm`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`Confirm alert failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+/**
+ * Cancel an alert
+ */
+export async function cancelAlertServer(alertId, baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/alerts/${alertId}/cancel`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`Cancel alert failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
