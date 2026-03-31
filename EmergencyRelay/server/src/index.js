@@ -57,6 +57,10 @@ const rosters = nedb.create({ filename: rostersFile, autoload: true });
 const studentsFile = path.join(DB_DIR, 'students.db');
 const students = nedb.create({ filename: studentsFile, autoload: true });
 
+// Create a NeDB for alerts
+const alertsFile = path.join(DB_DIR, 'alerts.db');
+const alerts = nedb.create({ filename: alertsFile, autoload: true });
+
 async function migrateRostersFromJson() {
   const jsonFile = path.join(__dirname, '../data/rosters.json');
   try {
@@ -477,6 +481,87 @@ app.delete('/rosters/:id', async (req, res) => {
   } catch (e) {
     console.error('Delete roster failed', e && e.message);
     res.status(500).json({ error: 'delete_failed' });
+  }
+});
+
+// Alerts endpoints
+// Get all active alerts (requires auth)
+app.get('/alerts', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller) return res.status(401).json({ error: 'no_auth' });
+  try {
+    const activeAlerts = await alerts.find({ status: 'active' });
+    const out = activeAlerts.map(a => ({
+      id: a.id || a._id,
+      location: a.location,
+      staff: a.staff,
+      type: a.type,
+      createdAt: a.created_at
+    }));
+    res.json(out);
+  } catch (e) {
+    console.error('Get alerts failed', e && e.message);
+    res.status(500).json({ error: 'get_failed' });
+  }
+});
+
+// Create an alert (any authenticated user)
+app.post('/alerts', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller) {
+    return res.status(401).json({ error: 'no_auth' });
+  }
+  const { location, staff, type } = req.body || {};
+  if (!location || !type) return res.status(400).json({ error: 'missing_fields' });
+  try {
+    const id = makeId();
+    const alert = {
+      id,
+      location: String(location).trim(),
+      staff: String(staff || 'Unknown').trim(),
+      type: String(type).trim(),
+      status: 'active',
+      created_at: new Date().toISOString()
+    };
+    await alerts.insert(alert);
+    res.status(201).json(alert);
+  } catch (e) {
+    console.error('Create alert failed', e && e.message);
+    res.status(500).json({ error: 'create_failed' });
+  }
+});
+
+// Confirm/resolve an alert (admin only)
+app.post('/alerts/:id/confirm', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('admin')) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  const { id } = req.params || {};
+  try {
+    const alert = await alerts.findOne({ id });
+    if (!alert) return res.status(404).json({ error: 'not_found' });
+    await alerts.update({ id }, { $set: { status: 'confirmed', confirmed_at: new Date().toISOString() } }, { multi: false });
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Confirm alert failed', e && e.message);
+    res.status(500).json({ error: 'confirm_failed' });
+  }
+});
+
+// Cancel an alert
+app.post('/alerts/:id/cancel', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller) return res.status(401).json({ error: 'no_auth' });
+  const { id } = req.params || {};
+  try {
+    const alert = await alerts.findOne({ id });
+    if (!alert) return res.status(404).json({ error: 'not_found' });
+    await alerts.update({ id }, { $set: { status: 'cancelled', cancelled_at: new Date().toISOString() } }, { multi: false });
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Cancel alert failed', e && e.message);
+    res.status(500).json({ error: 'cancel_failed' });
   }
 });
 
