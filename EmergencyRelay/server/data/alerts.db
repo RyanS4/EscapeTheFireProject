@@ -1,6 +1,0 @@
-{"id":"mnet0ds2gh9sdv","location":"My Location","staff":"b","type":"Test","status":"confirmed","created_at":"2026-03-31T16:00:57.026Z","_id":"0b4OZ7MoZ9SFcJ23","confirmed_at":"2026-03-31T16:02:05.645Z"}
-{"id":"mnet1gu5k47m6i","location":"P","staff":"a","type":"P","status":"confirmed","created_at":"2026-03-31T16:01:47.645Z","_id":"DN3uUvO1NuG6TAbJ","confirmed_at":"2026-03-31T16:01:58.650Z"}
-{"id":"mnesutvq8r6odq","location":"a","staff":"A","type":"A","status":"cancelled","created_at":"2026-03-31T15:56:37.958Z","_id":"TnIHpfSLGhhTVDeu","cancelled_at":"2026-03-31T15:58:31.001Z"}
-{"id":"mnesukyxmoh0ie","location":"Test1","staff":"a","type":"testttt","status":"cancelled","created_at":"2026-03-31T15:56:26.409Z","_id":"URmTPnnhPYDWuFI4","cancelled_at":"2026-03-31T15:56:30.127Z"}
-{"id":"mnet1s2r57k0fa","location":"s","staff":"b","type":"a","status":"cancelled","created_at":"2026-03-31T16:02:02.211Z","_id":"rUbaN1AwiFQ7EvUa","cancelled_at":"2026-03-31T16:02:23.130Z"}
-{"id":"mnet5trciy35ib","location":"Unknown","staff":"b","type":"s","status":"active","created_at":"2026-03-31T16:05:11.016Z","_id":"mi054Wz34V8zbxcV"}

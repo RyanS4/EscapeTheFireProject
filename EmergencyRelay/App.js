@@ -16,6 +16,17 @@ import { NavigationContainer } from '@react-navigation/native';
 import { StyleSheet } from 'react-native';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
+import { useEffect } from 'react';
+
+// Set notification handler
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 async function requestLocationPermission() {
   let { foregroundStatus } = await Location.requestForegroundPermissionsAsync();
@@ -26,6 +37,31 @@ async function requestLocationPermission() {
   } else {
     console.log('Location permission granted');
     return true;
+  }
+}
+
+async function requestNotificationPermissions() {
+  try {
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') {
+      console.log('Notification permission denied');
+      return false;
+    }
+    console.log('Notification permission granted');
+    return true;
+  } catch (e) {
+    console.error('Failed to request notification permissions:', e);
+    return false;
+  }
+}
+
+async function getPushToken() {
+  try {
+    const token = await Notifications.getExpoPushTokenAsync();
+    return token.data;
+  } catch (e) {
+    console.error('Failed to get push token:', e);
+    return null;
   }
 }
 
@@ -70,8 +106,20 @@ function RootNavigator() {
 
 
 export default function App() {
+  useEffect(() => {
+    async function setup() {
+      await requestLocationPermission();
+      await requestNotificationPermissions();
+    }
+    setup();
 
-  requestLocationPermission();
+    // Set up notification listener for when notifications are received
+    const subscription = Notifications.addNotificationReceivedListener(notification => {
+      console.log('Notification received:', notification);
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   return (
     <NavigationContainer>

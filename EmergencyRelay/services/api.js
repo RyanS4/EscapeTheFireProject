@@ -623,3 +623,26 @@ export async function cancelAlertServer(alertId, baseUrl) {
   }
   return res.json();
 }
+
+/**
+ * Register push token for the current user
+ */
+export async function registerPushTokenServer(pushToken, baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/user/register-push-token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ pushToken }),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`Register push token failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
