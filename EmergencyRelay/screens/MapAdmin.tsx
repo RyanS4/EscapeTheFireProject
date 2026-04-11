@@ -187,6 +187,9 @@ export default function MapAdmin() {
                         onRoomPress={handleRoomPress}
                         highlightedRooms={highlightedRooms}
                         selectedStairwellGroup={selectedStairwellGroup}
+                        showGrid={true}
+                        gridRows={10}
+                        gridCols={10}
                     />
                 </View>
 

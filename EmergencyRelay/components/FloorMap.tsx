@@ -134,12 +134,16 @@ interface FloorMapProps {
     onRoomPress?: (floor: number, roomId: string, roomName: string, type: string, stairwellGroup?: string) => void;
     highlightedRooms?: string[]; // Room IDs to highlight (e.g., rooms with alerts)
     selectedStairwellGroup?: string | null; // Currently selected stairwell group
+    showGrid?: boolean; // Toggle grid visibility
+    gridRows?: number; // Number of grid rows
+    gridCols?: number; // Number of grid columns
 }
 
-export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedStairwellGroup = null }: FloorMapProps) {
+export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedStairwellGroup = null, showGrid = true, gridRows = 10, gridCols = 10 }: FloorMapProps) {
     const [currentFloor, setCurrentFloor] = useState(1);
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
     const [imageLayout, setImageLayout] = useState({ offsetX: 0, offsetY: 0, width: 0, height: 0 });
+    const [showGridLabels, setShowGridLabels] = useState(false);
     const totalFloors = 3;
     
     // Get screen dimensions dynamically
@@ -202,6 +206,76 @@ export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedS
         }
     };
 
+    // Render 2D grid overlay
+    const renderGrid = () => {
+        if (!showGrid || imageLayout.width === 0 || imageLayout.height === 0) {
+            return null;
+        }
+
+        const cellWidth = imageLayout.width / gridCols;
+        const cellHeight = imageLayout.height / gridRows;
+        const gridLines: React.ReactNode[] = [];
+
+        // Vertical lines
+        for (let col = 0; col <= gridCols; col++) {
+            gridLines.push(
+                <View
+                    key={`v-${col}`}
+                    style={{
+                        position: 'absolute',
+                        left: imageLayout.offsetX + col * cellWidth,
+                        top: imageLayout.offsetY,
+                        width: 1,
+                        height: imageLayout.height,
+                        backgroundColor: 'rgba(100, 150, 255, 0.4)',
+                    }}
+                />
+            );
+        }
+
+        // Horizontal lines
+        for (let row = 0; row <= gridRows; row++) {
+            gridLines.push(
+                <View
+                    key={`h-${row}`}
+                    style={{
+                        position: 'absolute',
+                        left: imageLayout.offsetX,
+                        top: imageLayout.offsetY + row * cellHeight,
+                        width: imageLayout.width,
+                        height: 1,
+                        backgroundColor: 'rgba(100, 150, 255, 0.4)',
+                    }}
+                />
+            );
+        }
+
+        // Grid labels (coordinates)
+        if (showGridLabels) {
+            for (let col = 0; col < gridCols; col++) {
+                for (let row = 0; row < gridRows; row++) {
+                    gridLines.push(
+                        <Text
+                            key={`label-${col}-${row}`}
+                            style={{
+                                position: 'absolute',
+                                left: imageLayout.offsetX + col * cellWidth + cellWidth / 2 - 8,
+                                top: imageLayout.offsetY + row * cellHeight + cellHeight / 2 - 10,
+                                fontSize: 9,
+                                color: 'rgba(33, 150, 243, 0.6)',
+                                fontWeight: 'bold',
+                            }}
+                        >
+                            {col},{row}
+                        </Text>
+                    );
+                }
+            }
+        }
+
+        return gridLines;
+    };
+
     const getFloorLabel = (floor: number) => {
         switch (floor) {
             case 1: return '1st Floor';
@@ -254,6 +328,20 @@ export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedS
                 <TouchableOpacity onPress={goToNextFloor} style={styles.arrowButton}>
                     <Text style={styles.arrowText}>▶</Text>
                 </TouchableOpacity>
+
+                {/* Grid toggle buttons */}
+                {showGrid && (
+                    <View style={styles.gridToggleContainer}>
+                        <TouchableOpacity 
+                            style={[styles.gridToggleButton, styles.gridToggleButtonActive]}
+                            onPress={() => setShowGridLabels(!showGridLabels)}
+                        >
+                            <Text style={styles.gridToggleButtonText}>
+                                {showGridLabels ? '🔲' : '▦'}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
             </View>
 
             {/* Floor map image with clickable rooms */}
@@ -274,6 +362,9 @@ export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedS
                         </Text>
                     </View>
                 )}
+
+                {/* 2D Grid Overlay */}
+                {renderGrid()}
 
                 {/* Clickable room overlays */}
                 {currentRooms.map(room => {
@@ -422,5 +513,26 @@ const styles = StyleSheet.create({
     roomLabelHighlighted: {
         color: '#e65100',
         backgroundColor: 'rgba(255,255,255,0.95)',
+    },
+    gridToggleContainer: {
+        flexDirection: 'row',
+        gap: 8,
+        marginLeft: 'auto',
+    },
+    gridToggleButton: {
+        padding: 6,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.3)',
+    },
+    gridToggleButtonActive: {
+        backgroundColor: 'rgba(255,255,255,0.3)',
+        borderColor: 'rgba(255,255,255,0.6)',
+    },
+    gridToggleButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 });
