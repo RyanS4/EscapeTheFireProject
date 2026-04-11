@@ -19,8 +19,8 @@ export default function MapAdmin() {
     const { user } = useAuth();
     const [userLocations, setUserLocations] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [locationError, setLocationError] = useState(null);
-    const [formError, setFormError] = useState(null);
+    const [locationError, setLocationError] = useState<string | null>(null);
+    const [formError, setFormError] = useState<string | null>(null);
     const [alerts, setAlerts] = useState<AlertData[]>([]);
     const [selectedAlert, setSelectedAlert] = useState<AlertData | null>(null);
     const [showCreateForm, setShowCreateForm] = useState(false);
@@ -91,7 +91,8 @@ export default function MapAdmin() {
     function handleOpenCreateForm() {
         // Auto-populate location with user's current location
         if (userLocations.length > 0) {
-            const currentLocation = userLocations[0].lastLocation?.room || 'Unknown';
+            const firstLocation = userLocations[0] as any;
+            const currentLocation = firstLocation?.lastLocation?.room || 'Unknown';
             setAlertLocation(currentLocation);
         }
         setShowCreateForm(true);
@@ -130,6 +131,7 @@ export default function MapAdmin() {
     // Get room IDs that have active alerts for highlighting
     const highlightedRooms = alerts.map(a => {
         // Extract room number from location string (e.g., "Room 101" -> "101")
+        if (!a.location) return '';
         const match = a.location.match(/(\d+)/);
         return match ? match[1] : '';
     }).filter(Boolean);
@@ -151,7 +153,7 @@ export default function MapAdmin() {
         }
 
         // Check if there's an alert for this room
-        const alertForRoom = alerts.find(a => a.location.toLowerCase().includes(roomName.toLowerCase()));
+        const alertForRoom = alerts.find(a => a.location && a.location.toLowerCase().includes(roomName.toLowerCase()));
         if (alertForRoom) {
             setSelectedAlert(alertForRoom);
         } else {
@@ -202,11 +204,11 @@ export default function MapAdmin() {
                                 No users with location data
                             </Text>
                         )}
-                        {userLocations.map(u => (
-                            <View key={u.id} style={styles.userItem}>
-                                <Text style={{fontWeight: '600'}}>{u.email}</Text>
+                        {userLocations.map((u: any) => (
+                            <View key={u?.id || Math.random()} style={styles.userItem}>
+                                <Text style={{fontWeight: '600'}}>{u?.email || 'Unknown'}</Text>
                                 <Text style={{fontSize: 12, color: '#666'}}>
-                                    {u.lastLocation?.room ? `Room: ${u.lastLocation.room}` : 'Location: Unknown'}
+                                    {u?.lastLocation?.room ? `Room: ${u.lastLocation.room}` : 'Location: Unknown'}
                                 </Text>
                             </View>
                         ))}
@@ -244,9 +246,9 @@ export default function MapAdmin() {
             ) : selectedAlert ? (
                 <>
                     <ReportBox 
-                        location={selectedAlert.location}
-                        staff={selectedAlert.staff}
-                        type={selectedAlert.type}
+                        location={selectedAlert.location || 'Unknown'}
+                        staff={selectedAlert.staff || 'Unknown'}
+                        type={selectedAlert.type || 'Unknown'}
                     />
                     {formError && (
                         <Text style={{color: 'red', textAlign: 'center', marginVertical: 8, fontSize: 12}}>

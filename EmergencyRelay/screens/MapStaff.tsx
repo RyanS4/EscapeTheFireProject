@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     },
     mapBox: {
         width: '95%',
-        height: screenHeight * 0.25, // 25% of screen height
+        height: screenHeight * 0.50, // 25% of screen height
         backgroundColor: '#ddd',
         borderRadius: 8,
         borderColor: '#000',

@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
-import { View, Image, TouchableOpacity, Text, StyleSheet, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Image, TouchableOpacity, Text, StyleSheet, Dimensions, LayoutChangeEvent } from 'react-native';
 
 // Floor images - add secondFloorView.png and thirdFloorView.png when available
 const floorImages: { [key: number]: any } = {
     1: require('../assets/firstFloorView.png'),
     // 2: require('../assets/secondFloorView.png'),
     // 3: require('../assets/thirdFloorView.png'),
+};
+
+// Pre-defined image dimensions (update these if you change the images)
+// You can get these by checking the image file properties
+const floorImageDimensions: { [key: number]: { width: number; height: number } } = {
+    1: { width: 659, height: 379 }, // firstFloorView.png actual dimensions
+    2: { width: 659, height: 379 }, // Update when you add secondFloorView.png
+    3: { width: 659, height: 379 }, // Update when you add thirdFloorView.png
 };
 
 // Room definitions for each floor
@@ -35,7 +43,7 @@ const STAIRWELL_GROUPS = {
 const roomsByFloor: { [key: number]: RoomArea[] } = {
     1: [
         // Far left wing rooms
-        { id: 'room-2', name: 'Room 2', type: 'room', x: 26.4, y: 38.5, width: 3.5, height: 18 },
+        { id: 'room-2', name: 'Room 2', type: 'room', x: 2.5, y: 38.5, width: 7, height: 18 },
         { id: 'room-4', name: 'Room 4', type: 'room', x: 30, y: 38.5, width: 5, height: 11 },
         { id: 'room-7', name: 'Room 7', type: 'room', x: 1, y: 55, width: 5, height: 12 },
         
@@ -130,7 +138,55 @@ interface FloorMapProps {
 
 export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedStairwellGroup = null }: FloorMapProps) {
     const [currentFloor, setCurrentFloor] = useState(1);
+    const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+    const [imageLayout, setImageLayout] = useState({ offsetX: 0, offsetY: 0, width: 0, height: 0 });
     const totalFloors = 3;
+    
+    // Get screen dimensions dynamically
+    const screenHeight = Dimensions.get('window').height || 600;
+
+    // Recalculate where the image is actually rendered (for resizeMode="contain")
+    const recalculateImageLayout = (containerWidth: number, containerHeight: number, imgWidth: number, imgHeight: number) => {
+        if (containerWidth === 0 || containerHeight === 0) return;
+        if (imgWidth === 0 || imgHeight === 0) return;
+
+        const containerAspect = containerWidth / containerHeight;
+        const imageAspect = imgWidth / imgHeight;
+
+        let renderedWidth: number;
+        let renderedHeight: number;
+        let offsetX: number;
+        let offsetY: number;
+
+        if (imageAspect > containerAspect) {
+            // Image is wider than container - width fills, height is smaller
+            renderedWidth = containerWidth;
+            renderedHeight = containerWidth / imageAspect;
+            offsetX = 0;
+            offsetY = (containerHeight - renderedHeight) / 2;
+        } else {
+            // Image is taller than container - height fills, width is smaller
+            renderedHeight = containerHeight;
+            renderedWidth = containerHeight * imageAspect;
+            offsetX = (containerWidth - renderedWidth) / 2;
+            offsetY = 0;
+        }
+
+        setImageLayout({ offsetX, offsetY, width: renderedWidth, height: renderedHeight });
+    };
+
+    // Recalculate layout when container size changes - use pre-defined image dimensions
+    useEffect(() => {
+        const imgDims = floorImageDimensions[currentFloor];
+        if (containerSize.width > 0 && containerSize.height > 0 && imgDims) {
+            recalculateImageLayout(containerSize.width, containerSize.height, imgDims.width, imgDims.height);
+        }
+    }, [containerSize.width, containerSize.height, currentFloor]);
+
+    const onContainerLayout = (event: LayoutChangeEvent) => {
+        const { width, height } = event.nativeEvent.layout;
+        setContainerSize({ width, height });
+    };
 
     const goToPrevFloor = () => {
         setCurrentFloor(prev => (prev > 1 ? prev - 1 : totalFloors));
@@ -164,6 +220,27 @@ export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedS
     const currentRooms = roomsByFloor[currentFloor] || [];
     const hasFloorImage = floorImages[currentFloor] !== undefined;
 
+    // Calculate room position in pixels based on actual image layout
+    const getRoomStyle = (room: RoomArea) => {
+        if (imageLayout.width === 0 || imageLayout.height === 0) {
+            // Fallback to percentage-based if layout not calculated yet
+            return {
+                left: `${room.x}%` as any,
+                top: `${room.y}%` as any,
+                width: `${room.width}%` as any,
+                height: `${room.height}%` as any,
+            };
+        }
+        
+        // Calculate position relative to where the image is actually rendered
+        return {
+            left: imageLayout.offsetX + (room.x / 100) * imageLayout.width,
+            top: imageLayout.offsetY + (room.y / 100) * imageLayout.height,
+            width: (room.width / 100) * imageLayout.width,
+            height: (room.height / 100) * imageLayout.height,
+        };
+    };
+
     return (
         <View style={styles.container}>
             {/* Floor selector header */}
@@ -180,7 +257,7 @@ export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedS
             </View>
 
             {/* Floor map image with clickable rooms */}
-            <View style={styles.mapContainer}>
+            <View style={[styles.mapContainer, { height: Math.max(screenHeight * 0.3, 200) }]} onLayout={onContainerLayout}>
                 {hasFloorImage ? (
                     <Image
                         source={floorImages[currentFloor]}
@@ -211,12 +288,7 @@ export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedS
                                 room.type === 'hall' && styles.hallOverlay,
                                 isHighlighted && styles.roomHighlighted,
                                 isStairSelected && styles.stairwellSelected,
-                                {
-                                    left: `${room.x}%` as any,
-                                    top: `${room.y}%` as any,
-                                    width: `${room.width}%` as any,
-                                    height: `${room.height}%` as any,
-                                },
+                                getRoomStyle(room),
                             ]}
                             onPress={() => handleRoomPress(room)}
                             activeOpacity={0.7}
@@ -273,7 +345,7 @@ const styles = StyleSheet.create({
     mapContainer: {
         position: 'relative',
         width: '100%',
-        height: Dimensions.get('window').height * 0.3, // 30% of screen height
+        minHeight: 200,
         backgroundColor: '#e0e0e0',
     },
     mapImage: {
