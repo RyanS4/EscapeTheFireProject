@@ -1,9 +1,10 @@
-import {View, Text, Button, StyleSheet, TextInput, ScrollView} from 'react-native';
+import {View, Text, Button, StyleSheet, TextInput, ScrollView, Alert, Dimensions} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import React, {useState, useEffect} from 'react';
 import { getUserLocationsServer, getActiveAlertsServer, createAlertServer, confirmAlertServer, cancelAlertServer } from '../services/api';
 import { ReportBox } from '../models/Report';
+import FloorMap from '../components/FloorMap';
 
 interface AlertData {
     id: string;
@@ -18,8 +19,8 @@ export default function MapAdmin() {
     const { user } = useAuth();
     const [userLocations, setUserLocations] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [locationError, setLocationError] = useState(null);
-    const [formError, setFormError] = useState(null);
+    const [locationError, setLocationError] = useState<string | null>(null);
+    const [formError, setFormError] = useState<string | null>(null);
     const [alerts, setAlerts] = useState<AlertData[]>([]);
     const [selectedAlert, setSelectedAlert] = useState<AlertData | null>(null);
     const [showCreateForm, setShowCreateForm] = useState(false);
@@ -90,7 +91,8 @@ export default function MapAdmin() {
     function handleOpenCreateForm() {
         // Auto-populate location with user's current location
         if (userLocations.length > 0) {
-            const currentLocation = userLocations[0].lastLocation?.room || 'Unknown';
+            const firstLocation = userLocations[0] as any;
+            const currentLocation = firstLocation?.lastLocation?.room || 'Unknown';
             setAlertLocation(currentLocation);
         }
         setShowCreateForm(true);
@@ -100,11 +102,14 @@ export default function MapAdmin() {
     async function handleConfirmAlert() {
         if (!selectedAlert) return;
         try {
+            console.log('[MapAdmin] Confirming alert:', selectedAlert.id);
+            console.log('[MapAdmin] Alert details:', selectedAlert);
             await confirmAlertServer(selectedAlert.id);
+            console.log('[MapAdmin] ✓ Alert confirmed successfully. Notifications should be sent.');
             setAlerts(alerts.filter(a => a.id !== selectedAlert.id));
             setSelectedAlert(null);
         } catch (e) {
-            console.error('Failed to confirm alert:', e);
+            console.error('[MapAdmin] Failed to confirm alert:', e);
             setFormError(e && e.message ? e.message : 'Failed to confirm alert');
         }
     }
@@ -121,42 +126,94 @@ export default function MapAdmin() {
         }
     }
 
+    const [selectedStairwellGroup, setSelectedStairwellGroup] = useState<string | null>(null);
+
+    // Get room IDs that have active alerts for highlighting
+    const highlightedRooms = alerts.map(a => {
+        // Extract room number from location string (e.g., "Room 101" -> "101")
+        if (!a.location) return '';
+        const match = a.location.match(/(\d+)/);
+        return match ? match[1] : '';
+    }).filter(Boolean);
+
+    const handleRoomPress = (floor: number, roomId: string, roomName: string, type: string, stairwellGroup?: string) => {
+        // Handle stairwell selection - toggle and highlight across all floors
+        if (type === 'stairwell' && stairwellGroup) {
+            if (selectedStairwellGroup === stairwellGroup) {
+                setSelectedStairwellGroup(null); // Deselect
+            } else {
+                setSelectedStairwellGroup(stairwellGroup);
+            }
+            Alert.alert(
+                roomName,
+                `Floor ${floor}\n\nStairwell connects all floors.${selectedStairwellGroup === stairwellGroup ? '\n\nTap again to deselect.' : ''}`,
+                [{ text: 'OK' }]
+            );
+            return;
+        }
+
+        // Check if there's an alert for this room
+        const alertForRoom = alerts.find(a => a.location && a.location.toLowerCase().includes(roomName.toLowerCase()));
+        if (alertForRoom) {
+            setSelectedAlert(alertForRoom);
+        } else {
+            Alert.alert(
+                roomName,
+                `Floor ${floor}${type === 'hall' ? ' (Hallway)' : ''}\n\nNo active alerts for this location.`,
+                [
+                    { text: 'OK' },
+                    { 
+                        text: 'Create Alert Here', 
+                        onPress: () => {
+                            setAlertLocation(roomName);
+                            setShowCreateForm(true);
+                        }
+                    },
+                ]
+            );
+        }
+    };
+
     return(
-        <View style={styles.container}>
-            <View style={styles.mapBox}>
-                <Text style={{textAlign: 'center', marginTop: '5%', fontWeight: 'bold', fontSize: 16}}>
-                    Live User Locations
-                </Text>
-                {locationError && (
-                    <Text style={{color: 'red', textAlign: 'center', margin: 10}}>
-                        Error: {locationError}
-                    </Text>
-                )}
-                {loading && <Text style={{textAlign: 'center', marginTop: 10}}>Loading...</Text>}
-                {!loading && userLocations.length === 0 && !locationError && (
-                    <Text style={{textAlign: 'center', marginTop: 10, color: '#666'}}>
-                        No users with location data
-                    </Text>
-                )}
-                {userLocations.map(u => (
-                    <View key={u.id} style={{padding: 10, borderBottomWidth: 1, borderBottomColor: '#ccc'}}>
-                        <Text style={{fontWeight: '600'}}>{u.email}</Text>
-                        <Text style={{fontSize: 12, color: '#666'}}>
-                            {u.lastLocation?.room ? `Room: ${u.lastLocation.room}` : 'Location: Unknown'}
-                        </Text>
-                        {u.lastLocation?.bssid && (
-                            <Text style={{fontSize: 10, color: '#999'}}>
-                                WiFi: {u.lastLocation.bssid.substring(0, 17)}
+        <ScrollView 
+            style={styles.scrollView} 
+            contentContainerStyle={styles.scrollContainer}
+            showsVerticalScrollIndicator={true}
+        >
+            <View style={styles.container}>
+                {/* Floor Map at the top */}
+                <View style={styles.floorMapContainer}>
+                    <FloorMap 
+                        onRoomPress={handleRoomPress}
+                        highlightedRooms={highlightedRooms}
+                        selectedStairwellGroup={selectedStairwellGroup}
+                    />
+                </View>
+
+                <View style={styles.mapBox}>
+                    <Text style={styles.mapBoxTitle}>Live User Locations</Text>
+                    <ScrollView style={styles.userListScroll} nestedScrollEnabled={true}>
+                        {locationError && (
+                            <Text style={{color: 'red', textAlign: 'center', margin: 10}}>
+                                Error: {locationError}
                             </Text>
                         )}
-                        {u.lastLocation?.updated && (
-                            <Text style={{fontSize: 10, color: '#999'}}>
-                                Updated: {new Date(u.lastLocation.updated).toLocaleTimeString()}
+                        {loading && <Text style={{textAlign: 'center', marginTop: 10}}>Loading...</Text>}
+                        {!loading && userLocations.length === 0 && !locationError && (
+                            <Text style={{textAlign: 'center', marginTop: 10, color: '#666'}}>
+                                No users with location data
                             </Text>
                         )}
-                    </View>
-                ))}
-            </View>
+                        {userLocations.map((u: any) => (
+                            <View key={u?.id || Math.random()} style={styles.userItem}>
+                                <Text style={{fontWeight: '600'}}>{u?.email || 'Unknown'}</Text>
+                                <Text style={{fontSize: 12, color: '#666'}}>
+                                    {u?.lastLocation?.room ? `Room: ${u.lastLocation.room}` : 'Location: Unknown'}
+                                </Text>
+                            </View>
+                        ))}
+                    </ScrollView>
+                </View>
 
             {showCreateForm ? (
                 <>
@@ -189,9 +246,9 @@ export default function MapAdmin() {
             ) : selectedAlert ? (
                 <>
                     <ReportBox 
-                        location={selectedAlert.location}
-                        staff={selectedAlert.staff}
-                        type={selectedAlert.type}
+                        location={selectedAlert.location || 'Unknown'}
+                        staff={selectedAlert.staff || 'Unknown'}
+                        type={selectedAlert.type || 'Unknown'}
                     />
                     {formError && (
                         <Text style={{color: 'red', textAlign: 'center', marginVertical: 8, fontSize: 12}}>
@@ -231,24 +288,55 @@ export default function MapAdmin() {
                 <View style={{ height: 16 }} />
             )}
             <Button title="Back" onPress={handleBack} />
+            <View style={{ height: 20 }} />
         </View>
+        </ScrollView>
     )
 };
 
+const { height: screenHeight } = Dimensions.get('window');
+
 const styles = StyleSheet.create({
-    container: {
+    scrollView: {
         flex: 1,
-        justifyContent: 'center',
+        backgroundColor: '#fff',
+    },
+    scrollContainer: {
+        paddingBottom: 50,
+    },
+    container: {
         alignItems: 'center',
         backgroundColor: '#ffffffff',
+        paddingTop: 10,
+    },
+    floorMapContainer: {
+        width: '98%',
+        marginBottom: 12,
     },
     mapBox: {
-        width: '90%',
-        height: '50%',
+        width: '95%',
+        height: screenHeight * 0.25, // 25% of screen height
         backgroundColor: '#ddd',
         borderRadius: 8,
         borderColor: '#000',
         borderWidth: 1,
+        overflow: 'hidden',
+    },
+    mapBoxTitle: {
+        textAlign: 'center',
+        paddingVertical: 10,
+        fontWeight: 'bold',
+        fontSize: 18,
+        backgroundColor: '#ccc',
+    },
+    userListScroll: {
+        flex: 1,
+    },
+    userItem: {
+        padding: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#bbb',
+        backgroundColor: '#eee',
     },
     formContainer: {
         width: '90%',

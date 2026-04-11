@@ -2,6 +2,21 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+let Expo;
+let expo;
+
+// Initialize Expo client for sending push notifications
+try {
+  const expoModule = require('expo-server-sdk');
+  Expo = expoModule.Expo || expoModule;
+  expo = new Expo({ accessToken: process.env.EXPO_ACCESS_TOKEN });
+  console.log('[Expo] Expo SDK initialized successfully');
+} catch (e) {
+  console.error('[Expo] Failed to initialize Expo SDK:', e && e.message);
+  console.error('[Expo] Push notifications will not work without Expo SDK');
+  Expo = { isExpoPushToken: () => false };
+  expo = null;
+}
 
 // Use a lightweight pure-JS embedded DB to avoid native build issues.
 const nedb = require('nedb-promises');
@@ -61,6 +76,10 @@ const students = nedb.create({ filename: studentsFile, autoload: true });
 const alertsFile = path.join(DB_DIR, 'alerts.db');
 const alerts = nedb.create({ filename: alertsFile, autoload: true });
 
+// Create a NeDB for push tokens
+const pushTokensFile = path.join(DB_DIR, 'push_tokens.db');
+const pushTokens = nedb.create({ filename: pushTokensFile, autoload: true });
+
 async function migrateRostersFromJson() {
   const jsonFile = path.join(__dirname, '../data/rosters.json');
   try {
@@ -89,6 +108,115 @@ function verifyPassword(password, stored) {
 
 function makeId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+}
+
+/**
+ * Send emergency alert notifications to all registered users
+ */
+async function sendEmergencyNotifications(alert) {
+  try {
+    if (!expo) {
+      console.error('[NOTIFICATION] Expo SDK not initialized, cannot send notifications');
+      return;
+    }
+
+    console.log(`[NOTIFICATION] Starting to send notifications for alert ${alert.id}`);
+    
+    // Get all registered push tokens
+    const allTokens = await pushTokens.find({});
+    console.log(`[NOTIFICATION] Found ${allTokens ? allTokens.length : 0} registered push tokens`);
+    
+    if (!allTokens || allTokens.length === 0) {
+      console.log('[NOTIFICATION] No push tokens registered, skipping notifications');
+      return;
+    }
+
+    // Log all tokens and validate them
+    allTokens.forEach((t, idx) => {
+      const isValid = Expo.isExpoPushToken(t.token);
+      console.log(`[NOTIFICATION] Token ${idx + 1}: ${t.email} - Token valid: ${isValid}`);
+    });
+
+    // Filter out invalid tokens
+    const validTokens = allTokens
+      .map(t => t.token)
+      .filter(token => {
+        if (!token || typeof token !== 'string') {
+          console.log('[NOTIFICATION] Filtering out empty or non-string token');
+          return false;
+        }
+        const isValid = Expo.isExpoPushToken(token);
+        if (!isValid) {
+          console.log(`[NOTIFICATION] Filtering out invalid token: ${token.substring(0, 20)}...`);
+        }
+        return isValid;
+      });
+
+    console.log(`[NOTIFICATION] Valid tokens after filtering: ${validTokens.length}`);
+
+    if (validTokens.length === 0) {
+      console.log('[NOTIFICATION] No valid push tokens found');
+      return;
+    }
+
+    // Send notifications in chunks (Expo has rate limits)
+    const chunks = [];
+    const chunkSize = 100;
+    for (let i = 0; i < validTokens.length; i += chunkSize) {
+      chunks.push(validTokens.slice(i, i + chunkSize));
+    }
+
+    console.log(`[NOTIFICATION] Sending notifications in ${chunks.length} chunk(s)`);
+
+    for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
+      const chunk = chunks[chunkIdx];
+      const messages = chunk.map(token => ({
+        to: token,
+        sound: 'default',
+        title: '🚨 Emergency Alert Confirmed',
+        body: `Location: ${alert.location || 'Unknown'} | Type: ${alert.type || 'Unknown'}`,
+        data: { 
+          alertType: alert.type,
+          alertLocation: alert.location,
+          confirmedAt: new Date().toISOString()
+        },
+        ttl: 24 * 60 * 60,
+        priority: 'high',
+        badge: 1,
+      }));
+
+      try {
+        console.log(`[NOTIFICATION] Chunk ${chunkIdx + 1}: Sending ${messages.length} messages to Expo...`);
+        const tickets = await expo.sendPushNotificationsAsync(messages);
+        console.log(`[NOTIFICATION] Chunk ${chunkIdx + 1}: Sent ${tickets.length} notifications for alert ${alert.id}`);
+        
+        // Log results for each ticket
+        let successCount = 0;
+        let errorCount = 0;
+        tickets.forEach((ticket, idx) => {
+          if (ticket.status === 'ok') {
+            successCount++;
+            console.log(`[NOTIFICATION] ✓ Message ${idx + 1} sent: ID ${ticket.id}`);
+          } else if (ticket.status === 'error') {
+            errorCount++;
+            console.error(`[NOTIFICATION] ✗ Message ${idx + 1} error: ${ticket.message} - ${ticket.details ? JSON.stringify(ticket.details) : ''}`);
+          }
+        });
+        console.log(`[NOTIFICATION] Chunk ${chunkIdx + 1}: ${successCount} sent, ${errorCount} failed`);
+      } catch (e) {
+        console.error(`[NOTIFICATION] Chunk ${chunkIdx + 1}: Error sending push notifications: ${e && e.message}`);
+        if (e.stack) {
+          console.error(`[NOTIFICATION] Stack trace: ${e.stack}`);
+        }
+      }
+    }
+    console.log(`[NOTIFICATION] Finished sending notifications for alert ${alert.id}`);
+  } catch (e) {
+    console.error(`[NOTIFICATION] Failed to send emergency notifications: ${e && e.message}`);
+    if (e.stack) {
+      console.error(`[NOTIFICATION] Stack trace: ${e.stack}`);
+    }
+  }
 }
 
 // Admin creates a user
@@ -484,6 +612,70 @@ app.delete('/rosters/:id', async (req, res) => {
   }
 });
 
+// Push token registration endpoint
+app.post('/user/register-push-token', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller) return res.status(401).json({ error: 'no_auth' });
+  const { pushToken } = req.body || {};
+  console.log(`[PUSH_TOKEN] Registering token for user: ${caller.email}`);
+  console.log(`[PUSH_TOKEN] Token received: ${pushToken ? pushToken.substring(0, 30) + '...' : 'MISSING'}`);
+  
+  if (!pushToken) {
+    console.error('[PUSH_TOKEN] Error: Missing push token in request body');
+    return res.status(400).json({ error: 'missing_push_token' });
+  }
+  
+  try {
+    // Check if this user already has a token registered
+    const existing = await pushTokens.findOne({ userId: caller.id });
+    if (existing) {
+      // Update existing token
+      console.log(`[PUSH_TOKEN] Updating existing token for user ${caller.email}`);
+      await pushTokens.update({ userId: caller.id }, { $set: { token: pushToken, updated_at: new Date().toISOString() } });
+    } else {
+      // Insert new token
+      console.log(`[PUSH_TOKEN] Inserting new token for user ${caller.email}`);
+      await pushTokens.insert({
+        userId: caller.id,
+        email: caller.email,
+        token: pushToken,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+    }
+    console.log(`[PUSH_TOKEN] Successfully registered push token for ${caller.email}`);
+    res.json({ success: true, message: 'Push token registered successfully' });
+  } catch (e) {
+    console.error(`[PUSH_TOKEN] Error registering push token: ${e && e.message}`);
+    res.status(500).json({ error: 'register_failed', message: e && e.message });
+  }
+});
+
+// Debug endpoint: List all registered push tokens (admin only)
+app.get('/admin/push-tokens', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('admin')) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  try {
+    const allTokens = await pushTokens.find({});
+    console.log(`[DEBUG] Admin ${caller.email} requested push tokens list: ${allTokens.length} tokens found`);
+    const tokenList = allTokens.map(t => ({
+      userId: t.userId,
+      email: t.email,
+      token: t.token.substring(0, 30) + '...',
+      isValid: Expo.isExpoPushToken(t.token),
+      created_at: t.created_at,
+      updated_at: t.updated_at
+    }));
+    res.json({ total: allTokens.length, tokens: tokenList });
+  } catch (e) {
+    console.error(`[DEBUG] Error listing push tokens: ${e && e.message}`);
+    res.status(500).json({ error: 'list_failed', message: e && e.message });
+  }
+});
+
+
 // Alerts endpoints
 // Get all active alerts (requires auth)
 app.get('/alerts', async (req, res) => {
@@ -541,7 +733,12 @@ app.post('/alerts/:id/confirm', async (req, res) => {
   try {
     const alert = await alerts.findOne({ id });
     if (!alert) return res.status(404).json({ error: 'not_found' });
-    await alerts.update({ id }, { $set: { status: 'confirmed', confirmed_at: new Date().toISOString() } }, { multi: false });
+    
+    // Send emergency notifications to all users before removing the alert
+    await sendEmergencyNotifications(alert);
+    
+    // Remove the alert
+    await alerts.remove({ id }, { multi: false });
     res.json({ success: true });
   } catch (e) {
     console.error('Confirm alert failed', e && e.message);
@@ -557,7 +754,7 @@ app.post('/alerts/:id/cancel', async (req, res) => {
   try {
     const alert = await alerts.findOne({ id });
     if (!alert) return res.status(404).json({ error: 'not_found' });
-    await alerts.update({ id }, { $set: { status: 'cancelled', cancelled_at: new Date().toISOString() } }, { multi: false });
+    await alerts.remove({ id }, { multi: false });
     res.json({ success: true });
   } catch (e) {
     console.error('Cancel alert failed', e && e.message);
@@ -566,7 +763,49 @@ app.post('/alerts/:id/cancel', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => console.log(`server listening ${PORT}`));
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    message: 'Server is running',
+    time: new Date().toISOString()
+  });
+});
+
+// Test endpoint to see current push tokens (admin only)
+app.get('/admin/debug/push-tokens-count', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('admin')) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  try {
+    const allTokens = await pushTokens.find({});
+    console.log(`[DEBUG] Push tokens count: ${allTokens ? allTokens.length : 0}`);
+    res.json({ 
+      count: allTokens ? allTokens.length : 0,
+      tokens: allTokens ? allTokens.map(t => ({
+        userId: t.userId,
+        email: t.email,
+        tokenPreview: t.token.substring(0, 20) + '...',
+        isValid: Expo.isExpoPushToken(t.token),
+        createdAt: t.created_at,
+        updatedAt: t.updated_at
+      })) : []
+    });
+  } catch (e) {
+    console.error(`[DEBUG] Error getting push tokens: ${e && e.message}`);
+    res.status(500).json({ error: 'get_failed', message: e && e.message });
+  }
+});
+
+const server = app.listen(PORT, () => {
+  console.log(`========================================`);
+  console.log(`Server listening on port ${PORT}`);
+  console.log(`Health check: GET http://localhost:${PORT}/health`);
+  console.log(`Push tokens (admin only): GET http://localhost:${PORT}/admin/debug/push-tokens-count`);
+  console.log(`========================================`);
+});
 
 server.on('error', (err) => {
   if (err && err.code === 'EADDRINUSE') {

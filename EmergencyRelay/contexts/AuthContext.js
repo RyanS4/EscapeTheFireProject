@@ -1,7 +1,10 @@
 // contexts/AuthContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { fakeLogin, fakeGetMe, loginServer, getMeServer, clearTokens, setTokens, setApiBaseUrl, getAccessToken, getApiBaseUrl } from '../services/api';
+import { Platform } from 'react-native';
+import { fakeLogin, fakeGetMe, loginServer, getMeServer, clearTokens, setTokens, setApiBaseUrl, getAccessToken, getApiBaseUrl, registerPushTokenServer } from '../services/api';
 import { startLocationTracking, stopLocationTracking } from '../services/LocationTracker';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 
 const AuthContext = createContext(null);
 
@@ -61,6 +64,22 @@ export function AuthProvider({ children }) {
       if (res && res.user) {
         setUser(res.user);
         
+        // Register push token with server (only works on physical devices, not web/simulators)
+        try {
+          // Check if we're on a physical device
+          if (Platform.OS === 'web') {
+            console.log('[Auth] Push notifications not supported on web platform');
+          } else if (!Device.isDevice) {
+            console.log('[Auth] Push notifications require a physical device (not simulator/emulator for full support)');
+            // Still try to register - some emulators support it
+            await registerPushToken();
+          } else {
+            await registerPushToken();
+          }
+        } catch (e) {
+          console.warn('[Auth] Failed to register push token:', e && e.message);
+        }
+        
         // Start location tracking after successful login
         // Track every 5 seconds (5000ms) - adjust interval as needed
         try {
@@ -93,6 +112,57 @@ export function AuthProvider({ children }) {
       }
       // otherwise rethrow so the UI can show a network/server error
       throw e;
+    }
+  }
+  
+  // Helper function to register push token
+  async function registerPushToken() {
+    try {
+      console.log('[Auth] Getting push token...');
+      
+      // First check/request permissions
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      console.log('[Auth] Current notification permission status:', existingStatus);
+      
+      if (existingStatus !== 'granted') {
+        console.log('[Auth] Requesting notification permissions...');
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+        console.log('[Auth] Permission request result:', status);
+      }
+      
+      if (finalStatus !== 'granted') {
+        console.warn('[Auth] Notification permissions not granted');
+        return;
+      }
+      
+      console.log('[Auth] Notification permissions granted, getting token...');
+      
+      // Get the push token with the proper EAS projectId
+      let pushToken;
+      try {
+        pushToken = await Notifications.getExpoPushTokenAsync({
+          projectId: '4ddc16ba-942e-428c-b922-1402e5314177'
+        });
+      } catch (e) {
+        console.log('[Auth] getExpoPushTokenAsync failed:', e.message);
+        console.log('[Auth] Push notifications may require EAS configuration.');
+        return;
+      }
+      
+      console.log('[Auth] Push token received:', JSON.stringify(pushToken));
+      
+      if (pushToken && pushToken.data) {
+        console.log('[Auth] Registering push token with server:', pushToken.data.substring(0, 30) + '...');
+        await registerPushTokenServer(pushToken.data);
+        console.log('[Auth] ✓ Push token registered successfully');
+      } else {
+        console.warn('[Auth] Push token data is empty or undefined');
+      }
+    } catch (e) {
+      console.error('[Auth] Error in registerPushToken:', e && e.message);
+      console.error('[Auth] Full error:', JSON.stringify(e, Object.getOwnPropertyNames(e)));
     }
   }
 
