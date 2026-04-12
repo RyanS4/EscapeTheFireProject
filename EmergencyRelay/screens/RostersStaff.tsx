@@ -101,7 +101,7 @@ export default function RostersStaff() {
             </Modal>
             <View style={styles.rosterBox}>
                 <Text style={styles.RosterTitle}>All Classes</Text>
-                <FlatList data={rosters} keyExtractor={i => i.id} ListEmptyComponent={<Text style={{ color: '#666' }}>No rosters available</Text>} renderItem={({ item }) => {
+                <FlatList data={[...rosters].sort((a, b) => (a.name || '').localeCompare(b.name || ''))} keyExtractor={i => i.id} ListEmptyComponent={<Text style={{ color: '#666' }}>No rosters available</Text>} renderItem={({ item }) => {
                     const status = getRosterStatus(item.id);
                     const studentsAllClear = status ? status.accountedStudents === status.totalStudents : false;
                     const staffClear = status ? (!status.hasStaff || status.staffAccounted) : false;

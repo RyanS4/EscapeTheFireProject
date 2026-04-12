@@ -253,7 +253,7 @@ export default function StudentRoster() {
                                     </View>
                     ) : null }
                 <FlatList
-                    data={students}
+                    data={[...students].sort((a, b) => (a.name || `${a.firstName} ${a.lastName}`).localeCompare(b.name || `${b.firstName} ${b.lastName}`))}
                     style={{ flex: 1 }}
                     keyExtractor={item => item.id || item._id || `${(item.firstName || '')}-${(item.lastName || '')}-${(item.name || '')}`}
                     renderItem={({ item }) => (
@@ -300,7 +300,7 @@ export default function StudentRoster() {
                     {/* show selected students */}
                     {selectedStudentsForCreate.length > 0 ? (
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 }}>
-                            {selectedStudentsForCreate.map(s => (
+                            {[...selectedStudentsForCreate].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)).map(s => (
                                 <View key={s.id} style={{ padding: 6, backgroundColor: '#eef', borderRadius: 12, marginRight: 8, marginBottom: 8 }}>
                                     <Text>{s.firstName} {s.lastName}</Text>
                                 </View>
@@ -317,7 +317,7 @@ export default function StudentRoster() {
                     {(() => {
                         const assigned = (rosters || []).filter(r => r.assignedTo && user && r.assignedTo === user.id);
                         if (!assigned || assigned.length === 0) return <Text style={{ color: '#666', marginVertical: 8 }}>No classes assigned to you</Text>;
-                        return assigned.map(r => (
+                        return [...assigned].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(r => (
                             <TouchableOpacity key={r.id} onPress={() => openRoster(r.id)} style={{ padding: 8, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eee' }}>
                                 <Text style={{ fontSize: 16 }}>{r.name}{r.assignedToEmail ? ` - ${r.assignedToEmail}` : ''}</Text>
                             </TouchableOpacity>
@@ -330,7 +330,7 @@ export default function StudentRoster() {
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 80 }}>
                 <Text style={{ fontSize: 16, marginBottom: 8 }}>Classes</Text>
                 {rosters.length === 0 ? <Text style={{ color: '#666', marginVertical: 8 }}>No classes</Text> : null}
-                {rosters.map(item => (
+                {[...rosters].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(item => (
                     <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderColor: '#eee' }}>
                         <TouchableOpacity style={[styles.rosterRow, { flex: 1, padding: 8, backgroundColor: '#fff' }]} onPress={() => openRoster(item.id)}>
                             <Text style={{ fontSize: 16 }}>{item.name} {item.assignedToEmail ? `- ${item.assignedToEmail}` : ''}</Text>
@@ -346,7 +346,7 @@ export default function StudentRoster() {
                     <Text style={{ fontSize: 18, marginBottom: 12 }}>Select staff</Text>
                     {staffLoading ? <ActivityIndicator /> : (
                         <FlatList
-                            data={staffList}
+                            data={[...staffList].sort((a, b) => (a.email || '').localeCompare(b.email || ''))}
                             keyExtractor={i => i.id}
                             renderItem={({ item }) => (
                                 <TouchableOpacity style={{ padding: 12, borderBottomWidth: 1, borderColor: '#eee' }} onPress={() => {
@@ -370,7 +370,7 @@ export default function StudentRoster() {
                     <Text style={{ fontSize: 18, marginBottom: 12 }}>Select student</Text>
                     {studentLoading ? <ActivityIndicator /> : (
                         <FlatList
-                            data={studentList}
+                            data={[...studentList].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))}
                             keyExtractor={i => i.id}
                             renderItem={({ item }) => (
                                 <TouchableOpacity style={{ padding: 12, borderBottomWidth: 1, borderColor: '#eee', flexDirection: 'row', alignItems: 'center' }} onPress={async () => {

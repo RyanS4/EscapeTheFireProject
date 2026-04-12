@@ -139,7 +139,7 @@ export default function EditStudentID() {
                 <ActivityIndicator size="large" style={{ marginTop: 20 }} />
             ) : (
                 <FlatList
-                    data={students}
+                    data={[...students].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))}
                     keyExtractor={item => item.id}
                     style={{ flex: 1, width: '100%' }}
                     ListEmptyComponent={<Text style={styles.emptyText}>No students found</Text>}
