@@ -3,11 +3,11 @@ import Login from './screens/Login';
 import DashboardStaff from './screens/DashboardStaff';
 import DashboardAdmin from './screens/DashboardAdmin';
 import CreateStaffAccount from './screens/CreateStaffAccount';
-import DeleteStaffAccount from './screens/DeleteStaffAccount';
-import DeleteStudentAccount from './screens/DeleteStudentAccount';
 import RostersAdmin from './screens/RostersAdmin';
 import RostersStaff from './screens/RostersStaff';
 import CreateStudentID from './screens/CreateStudentID';
+import EditStudentID from './screens/EditStudentID';
+import EditStaffAccount from './screens/EditStaffAccount';
 import MapAdmin from './screens/MapAdmin';
 import MapStaff from './screens/MapStaff';
 import Instructions from './screens/Instructions';
@@ -83,10 +83,10 @@ function RootNavigator() {
       <Stack.Navigator screenOptions={{ headerShown: true }}>
         <Stack.Screen name="DashboardAdmin" component={DashboardAdmin} />
         <Stack.Screen name="CreateStaffAccount" component={CreateStaffAccount} />
-        <Stack.Screen name="DeleteStaffAccount" component={DeleteStaffAccount} />
-        <Stack.Screen name="DeleteStudentAccount" component={DeleteStudentAccount} />
         <Stack.Screen name="RostersAdmin" component={RostersAdmin} />
         <Stack.Screen name="CreateStudentID" component={CreateStudentID} />
+        <Stack.Screen name="EditStudentID" component={EditStudentID} />
+        <Stack.Screen name="EditStaffAccount" component={EditStaffAccount} />
         <Stack.Screen name="MapAdmin" component={MapAdmin} />
         <Stack.Screen name="Instructions" component={Instructions} />
       </Stack.Navigator>

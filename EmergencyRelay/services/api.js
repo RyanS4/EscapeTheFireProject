@@ -1,8 +1,65 @@
 let accessToken = null;
 let refreshToken = null;
 
+// AsyncStorage for session persistence (with web fallback)
+import { Platform } from 'react-native';
+const TOKEN_STORAGE_KEY = 'auth_tokens';
+
+// Platform-safe storage abstraction
+const Storage = {
+  async getItem(key) {
+    if (Platform.OS === 'web') {
+      try {
+        return localStorage.getItem(key);
+      } catch (e) {
+        return null;
+      }
+    }
+    // Native: use AsyncStorage
+    try {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      return await AsyncStorage.getItem(key);
+    } catch (e) {
+      console.warn('[Storage] getItem failed:', e && e.message);
+      return null;
+    }
+  },
+  async setItem(key, value) {
+    if (Platform.OS === 'web') {
+      try {
+        localStorage.setItem(key, value);
+      } catch (e) {
+        console.warn('[Storage] web setItem failed:', e);
+      }
+      return;
+    }
+    try {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      await AsyncStorage.setItem(key, value);
+    } catch (e) {
+      console.warn('[Storage] setItem failed:', e && e.message);
+    }
+  },
+  async removeItem(key) {
+    if (Platform.OS === 'web') {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        console.warn('[Storage] web removeItem failed:', e);
+      }
+      return;
+    }
+    try {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      await AsyncStorage.removeItem(key);
+    } catch (e) {
+      console.warn('[Storage] removeItem failed:', e && e.message);
+    }
+  }
+};
+
 // WiFi BSSID collection (cross-platform, requires permissions)
-import { Platform, PermissionsAndroid } from 'react-native';
+import { PermissionsAndroid } from 'react-native';
 let WifiManager;
 try {
   WifiManager = require('react-native-wifi-reborn').default;
@@ -47,11 +104,44 @@ export function setTokens(newAccessTokenOrObject, newRefreshToken) {
     accessToken = newAccessTokenOrObject || null;
     refreshToken = newRefreshToken || null;
   }
+  // Persist to AsyncStorage
+  persistTokens();
 }
 
-export function clearTokens() {
-    accessToken = null;
-    refreshToken = null;
+// Persist tokens to AsyncStorage (async, fire-and-forget)
+async function persistTokens() {
+  try {
+    const data = JSON.stringify({ access: accessToken, refresh: refreshToken });
+    await Storage.setItem(TOKEN_STORAGE_KEY, data);
+  } catch (e) {
+    console.warn('[api] Failed to persist tokens:', e && e.message);
+  }
+}
+
+// Load tokens from AsyncStorage (call on app init)
+export async function loadPersistedTokens() {
+  try {
+    const data = await Storage.getItem(TOKEN_STORAGE_KEY);
+    if (data) {
+      const parsed = JSON.parse(data);
+      accessToken = parsed.access || null;
+      refreshToken = parsed.refresh || null;
+      return true;
+    }
+  } catch (e) {
+    console.warn('[api] Failed to load persisted tokens:', e && e.message);
+  }
+  return false;
+}
+
+export async function clearTokens() {
+  accessToken = null;
+  refreshToken = null;
+  try {
+    await Storage.removeItem(TOKEN_STORAGE_KEY);
+  } catch (e) {
+    console.warn('[api] Failed to clear persisted tokens:', e && e.message);
+  }
 }
 
 export async function apiFetch(path, opts = {}) {
@@ -520,6 +610,77 @@ export async function deleteUserServer(id, baseUrl) {
     throw err;
   }
   return true;
+}
+
+/**
+ * Admin: update a user (edit staff account)
+ */
+export async function updateUserServer(id, updates, baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const body = {};
+  if (updates.email) body.email = updates.email;
+  if (updates.password) body.password = updates.password;
+  if (updates.roles) body.roles = updates.roles;
+  if (typeof updates.imageUrl !== 'undefined') body.imageUrl = updates.imageUrl;
+  
+  const res = await fetch(`${base}/admin/users/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`Update user failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+/**
+ * Admin: reset a user's password
+ */
+export async function resetUserPasswordServer(id, newPassword, baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/admin/users/${id}/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ newPassword }),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`Reset password failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+/**
+ * Admin: update a student
+ */
+export async function updateStudentServer(id, updates, baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const body = {};
+  if (updates.firstName) body.firstName = updates.firstName;
+  if (updates.lastName) body.lastName = updates.lastName;
+  if (typeof updates.imageUrl !== 'undefined') body.imageUrl = updates.imageUrl;
+  
+  const res = await fetch(`${base}/students/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`Update student failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
 }
 
 // Send BSSID to server and update user location

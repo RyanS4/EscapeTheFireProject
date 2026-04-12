@@ -1,4 +1,4 @@
-import {View, Text, TextInput, Button, StyleSheet} from 'react-native';
+import {View, Text, TextInput, Button, StyleSheet, Alert, Platform} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import React, {useState} from 'react';
@@ -26,7 +26,32 @@ const DashboardStaff = () => {
     }
 
     async function handleLogout() {
-        await signOut();
+        if (Platform.OS === 'web') {
+            // Use window.confirm on web since Alert.alert callbacks can be unreliable
+            const confirmed = window.confirm('Are you sure you want to log out?');
+            if (confirmed) {
+                try {
+                    await signOut();
+                } catch (e) {
+                    console.error('Logout failed:', e);
+                }
+            }
+        } else {
+            Alert.alert(
+                'Confirm Logout',
+                'Are you sure you want to log out?',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Logout', style: 'destructive', onPress: async () => {
+                        try {
+                            await signOut();
+                        } catch (e) {
+                            console.error('Logout failed:', e);
+                        }
+                    }}
+                ]
+            );
+        }
     }
 
     

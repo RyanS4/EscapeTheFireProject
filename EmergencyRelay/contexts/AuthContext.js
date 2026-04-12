@@ -1,7 +1,7 @@
 // contexts/AuthContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Platform } from 'react-native';
-import { fakeLogin, fakeGetMe, loginServer, getMeServer, clearTokens, setTokens, setApiBaseUrl, getAccessToken, getApiBaseUrl, registerPushTokenServer } from '../services/api';
+import { fakeLogin, fakeGetMe, loginServer, getMeServer, clearTokens, setTokens, setApiBaseUrl, getAccessToken, getApiBaseUrl, registerPushTokenServer, loadPersistedTokens } from '../services/api';
 import { startLocationTracking, stopLocationTracking } from '../services/LocationTracker';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
@@ -24,6 +24,17 @@ export function AuthProvider({ children }) {
       if (!getApiBaseUrl()) {
         console.warn('[Auth] API base is not configured. Set expo.extra.API_BASE in app.json or call configureApiBase(url).');
       }
+      
+      // Try to load persisted tokens from AsyncStorage
+      try {
+        const hasTokens = await loadPersistedTokens();
+        if (hasTokens) {
+          console.log('[Auth] Loaded persisted tokens from storage');
+        }
+      } catch (e) {
+        console.warn('[Auth] Failed to load persisted tokens:', e && e.message);
+      }
+      
       try {
         // try server first
         let me = null;
@@ -180,8 +191,9 @@ export function AuthProvider({ children }) {
       console.warn('[Auth] Error stopping location tracking:', e && e.message);
     }
     
-    // clear tokens and user
-    clearTokens();
+    // clear tokens and user (clearTokens is async now)
+    await clearTokens();
+    console.log('[Auth] Tokens cleared, setting user to null');
     setUser(null);
   }
 

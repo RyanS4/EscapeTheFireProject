@@ -1,4 +1,4 @@
-import {View, Text, TextInput, Button, StyleSheet} from 'react-native';
+import {View, Text, TextInput, Button, StyleSheet, Alert, Platform} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import React, {useState} from 'react';
@@ -26,7 +26,32 @@ const DashboardAdmin = () => {
     }
 
     async function handleLogout() {
-        await signOut();
+        if (Platform.OS === 'web') {
+            // Use window.confirm on web since Alert.alert callbacks can be unreliable
+            const confirmed = window.confirm('Are you sure you want to log out?');
+            if (confirmed) {
+                try {
+                    await signOut();
+                } catch (e) {
+                    console.error('Logout failed:', e);
+                }
+            }
+        } else {
+            Alert.alert(
+                'Confirm Logout',
+                'Are you sure you want to log out?',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Logout', style: 'destructive', onPress: async () => {
+                        try {
+                            await signOut();
+                        } catch (e) {
+                            console.error('Logout failed:', e);
+                        }
+                    }}
+                ]
+            );
+        }
     }
 
     function handleCreateStaffAccount() {
@@ -35,21 +60,20 @@ const DashboardAdmin = () => {
         (navigation as any).navigate('CreateStaffAccount');
     }
 
-    function handleDeleteStaffAccount() {
-        // Handle delete staff account logic here
-        console.log('Deleting staff account');
-        (navigation as any).navigate('DeleteStaffAccount');
-    }
-
-    function handleDeleteStudentID() {
-        console.log('Deleting student account');
-        (navigation as any).navigate('DeleteStudentAccount');
+    function handleManageStaffAccounts() {
+        console.log('Managing staff accounts');
+        (navigation as any).navigate('EditStaffAccount');
     }
 
     function handleCreateStudentID() {
         // Handle create student ID logic here
         console.log('Creating student ID');
         (navigation as any).navigate('CreateStudentID');
+    }
+
+    function handleManageStudentIDs() {
+        console.log('Managing student IDs');
+        (navigation as any).navigate('EditStudentID');
     }
 
     return (
@@ -68,15 +92,15 @@ const DashboardAdmin = () => {
             <View style={{ height: 32 }} />
             <View style={styles.containerBox}>
                 <Text style={styles.title}>Admin Settings</Text>
-                <Text style={styles.caption}>From here you can manage staff accounts and manage student IDs</Text>
+                <Text style={styles.caption}>From here you can manage staff accounts and student IDs</Text>
                 <View style={{ height: 16 }} />
                 <Button title="Create New Staff Account" onPress={handleCreateStaffAccount} />
                 <View style={{ height: 16 }} />
-                <Button title="Delete Staff Account" onPress={handleDeleteStaffAccount} />
+                <Button title="Manage Staff Accounts" onPress={handleManageStaffAccounts} />
                 <View style={{ height: 16 }} />
                 <Button title="Create Student ID" onPress={handleCreateStudentID} />
                 <View style={{ height: 16 }} />
-                <Button title="Delete Student ID" onPress={handleDeleteStudentID} />
+                <Button title="Manage Student IDs" onPress={handleManageStudentIDs} />
                 <View style={{ height: 16 }} />
             </View>
             <View style={{ height: 32 }} />
