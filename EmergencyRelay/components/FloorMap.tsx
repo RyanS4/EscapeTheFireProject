@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, Image, TouchableOpacity, Text, StyleSheet, Dimensions, LayoutChangeEvent } from 'react-native';
+import { View, Image, TouchableOpacity, Pressable, Text, StyleSheet, Dimensions, LayoutChangeEvent, Platform } from 'react-native';
 
 // Floor images - add secondFloorView.png and thirdFloorView.png when available
 const floorImages: { [key: number]: any } = {
     1: require('../assets/firstFloorView.png'),
-    // 2: require('../assets/secondFloorView.png'),
+    2: require('../assets/SquashFloorplan.png'),
     // 3: require('../assets/thirdFloorView.png'),
 };
 
 // Pre-defined image dimensions (update these if you change the images)
-// You can get these by checking the image file properties
+// You can get these by checking the image file properties or running:
+// file assets/yourimage.png
 const floorImageDimensions: { [key: number]: { width: number; height: number } } = {
     1: { width: 659, height: 379 }, // firstFloorView.png actual dimensions
-    2: { width: 659, height: 379 }, // Update when you add secondFloorView.png
+    2: { width: 777, height: 321 }, // SquashFloorplan.png actual dimensions
     3: { width: 659, height: 379 }, // Update when you add thirdFloorView.png
 };
 
@@ -32,16 +33,31 @@ interface RoomArea {
 }
 
 // Stairwell groups - selecting one highlights all in the same group across floors
+// Note: Each floor can have different stairwell positions, but same group letter = connected
 const STAIRWELL_GROUPS = {
-    'A': ['stair-A-1', 'stair-A-2', 'stair-A-3'], // Top stairwell
-    'B': ['stair-B-1', 'stair-B-2', 'stair-B-3'], // Middle stairwell
-    'C': ['stair-C-1', 'stair-C-2', 'stair-C-3'], // Bottom stairwell
+    'A': ['stair-A-1', 'stair-A-2', 'stair-A-3'], // Stairwell A (all floors)
+    'B': ['stair-B-1', 'stair-B-2', 'stair-B-3'], // Stairwell B (all floors)
+    'C': ['stair-C-1'], // Stairwell C (floor 1 only)
 };
 
-// Room coordinates calibrated to the floor plan image
-// Values are percentages (0-100) - adjust if image changes
+// Room coordinates calibrated to each floor's plan image
+// Each floor can have a DIFFERENT number of rooms and different positions!
+// Values are percentages (0-100) of the image dimensions
+// 
+// HOW TO CONFIGURE A FLOOR:
+// 1. Add your floor plan image to assets/ folder
+// 2. Update floorImages[floorNumber] to require your image
+// 3. Update floorImageDimensions[floorNumber] with actual pixel dimensions
+// 4. Define rooms in roomsByFloor[floorNumber] with x, y, width, height as percentages
+//    - x: distance from left edge (0 = left, 100 = right)
+//    - y: distance from top edge (0 = top, 100 = bottom)
+//    - width/height: room size as percentage of image
+//
 const roomsByFloor: { [key: number]: RoomArea[] } = {
     1: [
+        // =====================================================
+        // FLOOR 1 - firstFloorView.png (659x379 pixels)
+        // =====================================================
         // Far left wing rooms
         { id: 'room-2', name: 'Room 2', type: 'room', x: 2.5, y: 38.5, width: 7, height: 18 },
         { id: 'room-4', name: 'Room 4', type: 'room', x: 32.4, y: 38.5, width: 5, height: 11 },
@@ -99,34 +115,63 @@ const roomsByFloor: { [key: number]: RoomArea[] } = {
         { id: 'room-27', name: 'Room 27', type: 'room', x: 90, y: 35, width: 8, height: 25 },
     ],
     2: [
-        // Floor 2 - same layout with 200-series room numbers
-        { id: 'room-202', name: 'Room 202', type: 'room', x: 1, y: 30, width: 6, height: 15 },
-        { id: 'room-204', name: 'Room 204', type: 'room', x: 1, y: 45, width: 6, height: 15 },
-        { id: 'room-207', name: 'Room 207', type: 'room', x: 1, y: 60, width: 5, height: 12 },
-        { id: 'hall-main-2', name: 'Main Hall', type: 'hall', x: 7, y: 30, width: 4, height: 42 },
-        { id: 'room-211', name: 'Room 211', type: 'room', x: 14, y: 22, width: 6, height: 10 },
-        { id: 'room-212', name: 'Room 212', type: 'room', x: 14, y: 32, width: 6, height: 10 },
-        { id: 'room-213', name: 'Room 213', type: 'room', x: 14, y: 42, width: 6, height: 10 },
-        { id: 'room-214', name: 'Room 214', type: 'room', x: 14, y: 52, width: 6, height: 10 },
-        { id: 'room-215', name: 'Room 215', type: 'room', x: 14, y: 62, width: 7, height: 10 },
-        { id: 'stair-A-2', name: 'Stairwell A', type: 'stairwell', stairwellGroup: 'A', x: 52, y: 10, width: 4, height: 8 },
-        { id: 'stair-B-2', name: 'Stairwell B', type: 'stairwell', stairwellGroup: 'B', x: 45, y: 28, width: 5, height: 7 },
-        { id: 'stair-C-2', name: 'Stairwell C', type: 'stairwell', stairwellGroup: 'C', x: 45, y: 45, width: 6, height: 10 },
+        // =====================================================
+        // FLOOR 2 - SquashFloorplan.png (777x321 pixels)
+        // Unique layout - customize room positions to match your floor plan
+        // Coordinates are percentages (0-100) of the image dimensions
+        // =====================================================
+        
+        // Left section rooms
+        { id: 'room-201', name: 'Gymnasium', type: 'room', x: 2, y: 10, width: 20, height: 35 },
+        { id: 'room-202', name: 'Equipment Room', type: 'room', x: 2, y: 50, width: 10, height: 20 },
+        { id: 'room-203', name: 'Locker Room A', type: 'room', x: 2, y: 72, width: 12, height: 18 },
+        
+        // Center section
+        { id: 'hall-main-2', name: 'Main Corridor', type: 'hall', x: 24, y: 40, width: 30, height: 8 },
+        { id: 'room-204', name: 'Office', type: 'room', x: 25, y: 10, width: 12, height: 15 },
+        { id: 'room-205', name: 'Storage', type: 'room', x: 25, y: 55, width: 10, height: 15 },
+        { id: 'room-206', name: 'Locker Room B', type: 'room', x: 38, y: 55, width: 12, height: 18 },
+        
+        // Right section  
+        { id: 'room-207', name: 'Squash Court 1', type: 'room', x: 58, y: 5, width: 18, height: 28 },
+        { id: 'room-208', name: 'Squash Court 2', type: 'room', x: 58, y: 35, width: 18, height: 28 },
+        { id: 'room-209', name: 'Squash Court 3', type: 'room', x: 58, y: 65, width: 18, height: 28 },
+        { id: 'room-210', name: 'Viewing Area', type: 'room', x: 78, y: 20, width: 15, height: 25 },
+        { id: 'room-211', name: 'Pro Shop', type: 'room', x: 78, y: 50, width: 15, height: 20 },
+        
+        // Stairwells (same location relative to building structure)
+        { id: 'stair-A-2', name: 'Stairwell A', type: 'stairwell', stairwellGroup: 'A', x: 15, y: 35, width: 5, height: 10 },
+        { id: 'stair-B-2', name: 'Stairwell B', type: 'stairwell', stairwellGroup: 'B', x: 52, y: 42, width: 5, height: 10 },
     ],
     3: [
-        // Floor 3 - same layout with 300-series room numbers
-        { id: 'room-302', name: 'Room 302', type: 'room', x: 1, y: 30, width: 6, height: 15 },
-        { id: 'room-304', name: 'Room 304', type: 'room', x: 1, y: 45, width: 6, height: 15 },
-        { id: 'room-307', name: 'Room 307', type: 'room', x: 1, y: 60, width: 5, height: 12 },
-        { id: 'hall-main-3', name: 'Main Hall', type: 'hall', x: 7, y: 30, width: 4, height: 42 },
-        { id: 'room-311', name: 'Room 311', type: 'room', x: 14, y: 22, width: 6, height: 10 },
-        { id: 'room-312', name: 'Room 312', type: 'room', x: 14, y: 32, width: 6, height: 10 },
-        { id: 'room-313', name: 'Room 313', type: 'room', x: 14, y: 42, width: 6, height: 10 },
-        { id: 'room-314', name: 'Room 314', type: 'room', x: 14, y: 52, width: 6, height: 10 },
-        { id: 'room-315', name: 'Room 315', type: 'room', x: 14, y: 62, width: 7, height: 10 },
-        { id: 'stair-A-3', name: 'Stairwell A', type: 'stairwell', stairwellGroup: 'A', x: 52, y: 10, width: 4, height: 8 },
-        { id: 'stair-B-3', name: 'Stairwell B', type: 'stairwell', stairwellGroup: 'B', x: 45, y: 28, width: 5, height: 7 },
-        { id: 'stair-C-3', name: 'Stairwell C', type: 'stairwell', stairwellGroup: 'C', x: 45, y: 45, width: 6, height: 10 },
+        // =====================================================
+        // FLOOR 3 - thirdFloorView.png (add image when available)
+        // Unique layout - customize room positions to match your floor plan
+        // Coordinates are percentages (0-100) of the image dimensions
+        // =====================================================
+        
+        // Example: Administrative floor with different layout
+        { id: 'room-301', name: 'Conference Room A', type: 'room', x: 5, y: 10, width: 15, height: 20 },
+        { id: 'room-302', name: 'Conference Room B', type: 'room', x: 5, y: 35, width: 15, height: 20 },
+        { id: 'room-303', name: 'Director Office', type: 'room', x: 5, y: 60, width: 12, height: 18 },
+        
+        // Center corridor
+        { id: 'hall-main-3', name: 'Main Corridor', type: 'hall', x: 22, y: 42, width: 50, height: 6 },
+        
+        // Office spaces
+        { id: 'room-304', name: 'Open Office', type: 'room', x: 25, y: 10, width: 25, height: 28 },
+        { id: 'room-305', name: 'Break Room', type: 'room', x: 25, y: 52, width: 12, height: 20 },
+        { id: 'room-306', name: 'Supply Room', type: 'room', x: 40, y: 52, width: 10, height: 15 },
+        
+        // Right wing
+        { id: 'room-307', name: 'Training Room', type: 'room', x: 55, y: 10, width: 20, height: 25 },
+        { id: 'room-308', name: 'IT Office', type: 'room', x: 55, y: 55, width: 15, height: 18 },
+        { id: 'room-309', name: 'Server Room', type: 'room', x: 72, y: 55, width: 10, height: 15 },
+        { id: 'room-310', name: 'Reception', type: 'room', x: 78, y: 10, width: 15, height: 20 },
+        
+        // Stairwells
+        { id: 'stair-A-3', name: 'Stairwell A', type: 'stairwell', stairwellGroup: 'A', x: 20, y: 38, width: 5, height: 10 },
+        { id: 'stair-B-3', name: 'Stairwell B', type: 'stairwell', stairwellGroup: 'B', x: 75, y: 35, width: 5, height: 10 },
     ],
 };
 
@@ -221,6 +266,7 @@ export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedS
             gridLines.push(
                 <View
                     key={`v-${col}`}
+                    pointerEvents="none"
                     style={{
                         position: 'absolute',
                         left: imageLayout.offsetX + col * cellWidth,
@@ -238,6 +284,7 @@ export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedS
             gridLines.push(
                 <View
                     key={`h-${row}`}
+                    pointerEvents="none"
                     style={{
                         position: 'absolute',
                         left: imageLayout.offsetX,
@@ -264,7 +311,8 @@ export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedS
                                 fontSize: 9,
                                 color: 'rgba(33, 150, 243, 0.6)',
                                 fontWeight: 'bold',
-                            }}
+                                pointerEvents: 'none',
+                            } as any}
                         >
                             {col},{row}
                         </Text>
@@ -273,7 +321,12 @@ export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedS
             }
         }
 
-        return gridLines;
+        // Wrap all grid elements in a container with pointerEvents="none"
+        return (
+            <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                {gridLines}
+            </View>
+        );
     };
 
     const getFloorLabel = (floor: number) => {
@@ -347,13 +400,15 @@ export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedS
             {/* Floor map image with clickable rooms */}
             <View style={[styles.mapContainer, { height: Math.max(screenHeight * 0.3, 200) }]} onLayout={onContainerLayout}>
                 {hasFloorImage ? (
-                    <Image
-                        source={floorImages[currentFloor]}
-                        style={styles.mapImage}
-                        resizeMode="contain"
-                    />
+                    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+                        <Image
+                            source={floorImages[currentFloor]}
+                            style={styles.mapImage}
+                            resizeMode="contain"
+                        />
+                    </View>
                 ) : (
-                    <View style={styles.placeholderMap}>
+                    <View style={styles.placeholderMap} pointerEvents="none">
                         <Text style={styles.placeholderText}>
                             {getFloorLabel(currentFloor)} image not available
                         </Text>
@@ -371,18 +426,19 @@ export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedS
                     const isHighlighted = highlightedRooms.includes(room.id);
                     const isStairSelected = isStairwellSelected(room);
                     return (
-                        <TouchableOpacity
+                        <Pressable
                             key={room.id}
-                            style={[
+                            style={({ pressed }) => [
                                 styles.roomOverlay,
                                 room.type === 'stairwell' && styles.stairwellOverlay,
                                 room.type === 'hall' && styles.hallOverlay,
                                 isHighlighted && styles.roomHighlighted,
                                 isStairSelected && styles.stairwellSelected,
                                 getRoomStyle(room),
+                                pressed && styles.roomPressed,
+                                Platform.OS === 'web' && { cursor: 'pointer' } as any,
                             ]}
                             onPress={() => handleRoomPress(room)}
-                            activeOpacity={0.7}
                         >
                             <Text style={[
                                 styles.roomLabel,
@@ -393,7 +449,7 @@ export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedS
                             ]} numberOfLines={1} adjustsFontSizeToFit>
                                 {room.name}
                             </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                     );
                 })}
             </View>
@@ -467,6 +523,11 @@ const styles = StyleSheet.create({
         borderRadius: 2,
         justifyContent: 'center',
         alignItems: 'center',
+        zIndex: 10,
+    },
+    roomPressed: {
+        opacity: 0.7,
+        backgroundColor: 'rgba(33, 150, 243, 0.5)',
     },
     hallOverlay: {
         backgroundColor: 'rgba(76, 175, 80, 0.2)',

@@ -13,7 +13,7 @@ import MapStaff from './screens/MapStaff';
 import Instructions from './screens/Instructions';
 const Stack = createStackNavigator();
 import { NavigationContainer } from '@react-navigation/native';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
@@ -65,6 +65,17 @@ async function getPushToken() {
   }
 }
 
+async function setupNotificationChannel() {
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('emergency-alerts', {
+      name: 'Emergency Alerts',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      sound: 'default',
+    });
+  }
+}
+
 
 function RootNavigator() {
   const { user, isAdmin } = useAuth();
@@ -110,6 +121,7 @@ export default function App() {
     async function setup() {
       await requestLocationPermission();
       await requestNotificationPermissions();
+      await setupNotificationChannel();
     }
     setup();
 

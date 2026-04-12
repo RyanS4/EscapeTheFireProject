@@ -189,6 +189,8 @@ async function sendEmergencyNotifications(alert) {
         ttl: 24 * 60 * 60,
         priority: 'high',
         badge: 1,
+        channelId: 'emergency-alerts',
+        vibrate: [0, 250, 250, 250],
       }));
 
       try {
@@ -222,6 +224,83 @@ async function sendEmergencyNotifications(alert) {
     if (e.stack) {
       console.error(`[NOTIFICATION] Stack trace: ${e.stack}`);
     }
+  }
+}
+
+/**
+ * Send alert notifications to admin users only (when a new alert is created)
+ */
+async function sendAdminNotifications(alert) {
+  try {
+    if (!expo) {
+      console.error('[NOTIFICATION] Expo SDK not initialized, cannot send admin notifications');
+      return;
+    }
+
+    console.log(`[NOTIFICATION] Sending admin notifications for new alert ${alert.id}`);
+    
+    // Get all users and filter for admins
+    const allUsers = await db.find({});
+    const admins = allUsers.filter(u => u.roles && Array.isArray(u.roles) && u.roles.includes('admin'));
+    
+    if (admins.length === 0) {
+      console.log('[NOTIFICATION] No admin users found');
+      return;
+    }
+    
+    console.log(`[NOTIFICATION] Found ${admins.length} admin users`);
+    
+    // Get push tokens for admin users
+    const adminIds = admins.map(a => a.id);
+    const allTokens = await pushTokens.find({});
+    const adminTokens = allTokens.filter(t => adminIds.includes(t.userId) || (t.roles && t.roles.includes('admin')));
+    
+    if (adminTokens.length === 0) {
+      console.log('[NOTIFICATION] No admin push tokens found');
+      return;
+    }
+
+    const validTokens = adminTokens
+      .map(t => t.token)
+      .filter(token => token && Expo.isExpoPushToken(token));
+
+    console.log(`[NOTIFICATION] Found ${validTokens.length} valid admin push tokens`);
+
+    if (validTokens.length === 0) return;
+
+    const messages = validTokens.map(token => ({
+      to: token,
+      sound: 'default',
+      title: '⚠️ New Emergency Alert',
+      body: `Location: ${alert.location || 'Unknown'} | Type: ${alert.type || 'Unknown'} - Please review and confirm`,
+      data: { 
+        alertType: alert.type,
+        alertLocation: alert.location,
+        alertId: alert.id,
+        createdAt: alert.created_at
+      },
+      ttl: 24 * 60 * 60,
+      priority: 'high',
+      badge: 1,
+      channelId: 'emergency-alerts',
+      vibrate: [0, 250, 250, 250],
+    }));
+
+    try {
+      const tickets = await expo.sendPushNotificationsAsync(messages);
+      console.log(`[NOTIFICATION] Sent ${tickets.length} admin notifications for alert ${alert.id}`);
+      tickets.forEach((ticket, idx) => {
+        if (ticket.status === 'ok') {
+          console.log(`[NOTIFICATION] ✓ Admin message ${idx + 1} sent: ID ${ticket.id}`);
+        } else {
+          console.error(`[NOTIFICATION] ✗ Admin message ${idx + 1} error: ${ticket.message}`);
+        }
+      });
+    } catch (e) {
+      console.error(`[NOTIFICATION] Error sending admin notifications: ${e && e.message}`);
+    }
+  } catch (e) {
+    console.error(`[NOTIFICATION] Failed to send admin notifications: ${e && e.message}`);
   }
 }
 
@@ -806,6 +885,7 @@ app.post('/rosters/:id/assign', async (req, res) => {
 });
 
 // Update roster properties (staffAccounted, etc.)
+// When staffAccounted changes, update ALL rosters with the same assigned staff member
 app.patch('/rosters/:id', async (req, res) => {
   const caller = await userFromToken(req);
   if (!caller) return res.status(401).json({ error: 'no_auth' });
@@ -825,7 +905,19 @@ app.patch('/rosters/:id', async (req, res) => {
     
     if (Object.keys(patch).length === 0) return res.status(400).json({ error: 'no_changes' });
     
-    await rosters.update({ id }, { $set: patch }, { multi: false });
+    // If staffAccounted is being updated and roster has assigned staff,
+    // update ALL rosters with the same assigned staff member
+    if (typeof staffAccounted === 'boolean' && roster.assignedTo) {
+      await rosters.update(
+        { assignedTo: roster.assignedTo },
+        { $set: { staffAccounted } },
+        { multi: true }
+      );
+      console.log(`[ROSTER] Updated staffAccounted=${staffAccounted} for all rosters with staff ${roster.assignedTo}`);
+    } else {
+      await rosters.update({ id }, { $set: patch }, { multi: false });
+    }
+    
     const updated = await rosters.findOne({ id });
     res.json(updated);
   } catch (e) {
@@ -868,16 +960,21 @@ app.post('/user/register-push-token', async (req, res) => {
     // Check if this user already has a token registered
     const existing = await pushTokens.findOne({ userId: caller.id });
     if (existing) {
-      // Update existing token
+      // Update existing token and roles
       console.log(`[PUSH_TOKEN] Updating existing token for user ${caller.email}`);
-      await pushTokens.update({ userId: caller.id }, { $set: { token: pushToken, updated_at: new Date().toISOString() } });
+      await pushTokens.update({ userId: caller.id }, { $set: { 
+        token: pushToken, 
+        roles: caller.roles || [],
+        updated_at: new Date().toISOString() 
+      }});
     } else {
-      // Insert new token
+      // Insert new token with roles
       console.log(`[PUSH_TOKEN] Inserting new token for user ${caller.email}`);
       await pushTokens.insert({
         userId: caller.id,
         email: caller.email,
         token: pushToken,
+        roles: caller.roles || [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
@@ -955,6 +1052,10 @@ app.post('/alerts', async (req, res) => {
       created_at: new Date().toISOString()
     };
     await alerts.insert(alert);
+    
+    // Notify admins about the new alert
+    await sendAdminNotifications(alert);
+    
     res.status(201).json(alert);
   } catch (e) {
     console.error('Create alert failed', e && e.message);
