@@ -105,6 +105,12 @@ function verifyPassword(password, stored) {
   return crypto.timingSafeEqual(Buffer.from(hashHex, 'hex'), derived);
 }
 
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const derived = crypto.scryptSync(password, salt, 64);
+  return `${salt}:${derived.toString('hex')}`;
+}
+
 
 function makeId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2,8);
@@ -222,7 +228,7 @@ async function sendEmergencyNotifications(alert) {
 // Admin creates a user
 // Admin creates a user
 app.post('/admin/users/create', async (req, res) => {
-  const { email, password, roles } = req.body || {};
+  const { email, password, roles, imageUrl } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: 'email_and_password_required' });
   const normalized = String(email).trim().toLowerCase();
   try {
@@ -238,12 +244,14 @@ app.post('/admin/users/create', async (req, res) => {
       status: 'active',
       created_at: new Date().toISOString(),
       session: null,
+      imageUrl: imageUrl || null,
     };
     await db.insert(doc);
-    res.status(201).json({ id, email: normalized, roles: doc.roles });
+    res.status(201).json({ id, email: normalized, roles: doc.roles, imageUrl: doc.imageUrl });
   } catch (e) {
-    console.error('Create user failed', e && e.message);
-    return res.status(500).json({ error: 'create_failed' });
+    console.error('Create user failed', e);
+    console.error('Error details:', e && e.message, e && e.stack);
+    return res.status(500).json({ error: 'create_failed', details: e && e.message });
   }
 });
 
@@ -316,7 +324,7 @@ app.get('/admin/users', async (req, res) => {
   try {
     const rows = await db.find({});
     // return limited fields
-    const out = rows.map(r => ({ id: r.id, email: r.email, roles: r.roles, status: r.status }));
+    const out = rows.map(r => ({ id: r.id, email: r.email, roles: r.roles, status: r.status, imageUrl: r.imageUrl || null }));
     res.json(out);
   } catch (e) {
     console.error('List users failed', e && e.message);
@@ -336,7 +344,8 @@ app.get('/users/locations', async (req, res) => {
       email: r.email,
       roles: r.roles,
       status: r.status,
-      lastLocation: r.last_location || null
+      lastLocation: r.last_location || null,
+      imageUrl: r.imageUrl || null
     }));
     res.json(out);
   } catch (e) {
@@ -346,6 +355,56 @@ app.get('/users/locations', async (req, res) => {
 });
 
 // Rosters endpoints
+// Get "All Clear" status - checks if all rosters have all students and staff accounted
+app.get('/rosters/all-clear', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller) return res.status(401).json({ error: 'no_auth' });
+  try {
+    const rows = await rosters.find({});
+    let allClear = true;
+    let totalRosters = rows.length;
+    let accountedRosters = 0;
+    const rosterStatuses = [];
+
+    for (const r of rows) {
+      const students = r.students || [];
+      const totalStudents = students.length;
+      const accountedStudents = students.filter(s => s.accounted === true).length;
+      const staffAccounted = r.staffAccounted === true;
+      const hasStaff = !!r.assignedTo;
+      
+      // A roster is "clear" if all students are accounted AND (no staff assigned OR staff is accounted)
+      const rosterClear = (totalStudents === accountedStudents) && (!hasStaff || staffAccounted);
+      
+      if (rosterClear) {
+        accountedRosters++;
+      } else {
+        allClear = false;
+      }
+
+      rosterStatuses.push({
+        id: r.id,
+        name: r.name,
+        clear: rosterClear,
+        totalStudents,
+        accountedStudents,
+        hasStaff,
+        staffAccounted
+      });
+    }
+
+    res.json({
+      allClear,
+      totalRosters,
+      accountedRosters,
+      rosterStatuses
+    });
+  } catch (e) {
+    console.error('All clear check failed', e && e.message);
+    res.status(500).json({ error: 'check_failed' });
+  }
+});
+
 // List rosters (requires auth)
 app.get('/rosters', async (req, res) => {
   const caller = await userFromToken(req);
@@ -360,7 +419,7 @@ app.get('/rosters', async (req, res) => {
         const u = await db.findOne({ id: r.assignedTo });
         if (u) assignedEmail = u.email;
       }
-      out.push({ id: r.id || r._id, name: r.name, assignedTo: r.assignedTo || null, assignedToEmail: assignedEmail, created_at: r.created_at });
+      out.push({ id: r.id || r._id, name: r.name, assignedTo: r.assignedTo || null, assignedToEmail: assignedEmail, created_at: r.created_at, staffAccounted: r.staffAccounted || false });
     }
     res.json(out);
   } catch (e) {
@@ -400,11 +459,15 @@ app.get('/rosters/:id', async (req, res) => {
     if (!r) return res.status(404).json({ error: 'not_found' });
     // allow any authenticated user to view a roster (staff can view other classes)
     let assignedEmail = null;
+    let staffImageUrl = null;
     if (r.assignedTo) {
       const u = await db.findOne({ id: r.assignedTo });
-      if (u) assignedEmail = u.email;
+      if (u) {
+        assignedEmail = u.email;
+        staffImageUrl = u.imageUrl || null;
+      }
     }
-    res.json({ id: r.id || r._id, name: r.name, students: r.students || [], assignedTo: r.assignedTo || null, assignedToEmail: assignedEmail, created_at: r.created_at });
+    res.json({ id: r.id || r._id, name: r.name, students: r.students || [], assignedTo: r.assignedTo || null, assignedToEmail: assignedEmail, staffImageUrl: staffImageUrl, created_at: r.created_at, staffAccounted: r.staffAccounted || false });
   } catch (e) {
     console.error('Get roster failed', e && e.message);
     res.status(500).json({ error: 'get_failed' });
@@ -532,11 +595,35 @@ app.put('/rosters/:id/students/:sid', async (req, res) => {
     const students = roster.students || [];
     const idx = students.findIndex(s => s.id === sid);
     if (idx === -1) return res.status(404).json({ error: 'student_not_found' });
+    
+    // Get the student name for syncing across rosters
+    const studentName = students[idx].name;
+    
     // update fields
     if (typeof accounted !== 'undefined') students[idx].accounted = !!accounted;
     if (typeof name !== 'undefined') students[idx].name = String(name);
     if (typeof imageUrl !== 'undefined') students[idx].imageUrl = imageUrl;
     await rosters.update({ id }, { $set: { students } }, { multi: false });
+    
+    // Sync accounted status across all other rosters with the same student name
+    if (typeof accounted !== 'undefined') {
+      const allRosters = await rosters.find({});
+      for (const r of allRosters) {
+        if (r.id === id) continue; // skip current roster
+        const rosterStudents = r.students || [];
+        let updated = false;
+        for (let i = 0; i < rosterStudents.length; i++) {
+          if (rosterStudents[i].name === studentName) {
+            rosterStudents[i].accounted = !!accounted;
+            updated = true;
+          }
+        }
+        if (updated) {
+          await rosters.update({ id: r.id }, { $set: { students: rosterStudents } }, { multi: false });
+        }
+      }
+    }
+    
     res.json(students[idx]);
   } catch (e) {
     console.error('Update student failed', e && e.message);
@@ -592,6 +679,35 @@ app.post('/rosters/:id/assign', async (req, res) => {
   } catch (e) {
     console.error('Assign roster failed', e && e.message);
     res.status(500).json({ error: 'assign_failed' });
+  }
+});
+
+// Update roster properties (staffAccounted, etc.)
+app.patch('/rosters/:id', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller) return res.status(401).json({ error: 'no_auth' });
+  const { id } = req.params || {};
+  if (!id) return res.status(400).json({ error: 'missing_id' });
+  try {
+    const roster = await rosters.findOne({ id });
+    if (!roster) return res.status(404).json({ error: 'not_found' });
+    // Check permission: admin or assigned staff
+    const isAdmin = Array.isArray(caller.roles) && caller.roles.includes('admin');
+    const isAssigned = roster.assignedTo === caller.id;
+    if (!isAdmin && !isAssigned) return res.status(403).json({ error: 'forbidden' });
+    
+    const { staffAccounted } = req.body || {};
+    const patch = {};
+    if (typeof staffAccounted === 'boolean') patch.staffAccounted = staffAccounted;
+    
+    if (Object.keys(patch).length === 0) return res.status(400).json({ error: 'no_changes' });
+    
+    await rosters.update({ id }, { $set: patch }, { multi: false });
+    const updated = await rosters.findOne({ id });
+    res.json(updated);
+  } catch (e) {
+    console.error('Update roster failed', e && e.message);
+    res.status(500).json({ error: 'update_failed' });
   }
 });
 

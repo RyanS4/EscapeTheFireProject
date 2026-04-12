@@ -13,6 +13,7 @@ export interface User {
   name: string;
   role: UserRole;
   lastLocation?: UserLocation;  // Current WiFi location
+  imageUrl?: string;            // Optional profile image URL
 }
 
 

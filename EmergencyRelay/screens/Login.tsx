@@ -39,7 +39,7 @@ const Login = () => {
       {/* 2. Wrap Password in a Container */}
       <View style={styles.passwordContainer}>
         <TextInput
-          style={[styles.input, { flex: 1, marginBottom: 0 }]} // Adjust style to fit button
+          style={styles.passwordInput}
           placeholder="Password"
           value={password}
           onChangeText={setPassword}
@@ -89,6 +89,12 @@ const styles = StyleSheet.create({
     borderColor: 'gray',
     borderWidth: 1,
     marginBottom: 12,
+    height: 40,
+  },
+  passwordInput: {
+    flex: 1,
+    height: 40,
+    paddingHorizontal: 8,
   },
   toggleButton: {
     paddingHorizontal: 10,

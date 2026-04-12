@@ -271,14 +271,16 @@ export async function getMeServer(baseUrl) {
 
 /**
  * Admin helper to create a new user on the server (development convenience).
- * body: { email, password, roles }
+ * body: { email, password, roles, imageUrl }
  */
-export async function createUserServer({ email, password, roles = ['staff'] }, baseUrl) {
+export async function createUserServer({ email, password, roles = ['staff'], imageUrl }, baseUrl) {
   const base = getBase(baseUrl);
+  const body = { email, password, roles };
+  if (imageUrl) body.imageUrl = imageUrl;
   const res = await fetch(`${base}/admin/users/create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password, roles }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const txt = await res.text();
@@ -297,6 +299,23 @@ export async function listRosters(baseUrl) {
   if (!res.ok) {
     const txt = await res.text();
     const err = new Error(`List rosters failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+/**
+ * Get "All Clear" status for all rosters
+ * Returns whether all rosters have all students and staff accounted
+ */
+export async function getAllClearStatus(baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/rosters/all-clear`, { method: 'GET', headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`All clear check failed: ${res.status} ${txt}`);
     err.status = res.status;
     throw err;
   }
@@ -381,6 +400,22 @@ export async function assignRoster(rosterId, { staffId, staffEmail, clear } = {}
   if (!res.ok) {
     const txt = await res.text();
     const err = new Error(`Assign roster failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+/**
+ * Update roster properties (staffAccounted, etc.)
+ */
+export async function updateRoster(rosterId, patch, baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/rosters/${rosterId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` }, body: JSON.stringify(patch) });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`Update roster failed: ${res.status} ${txt}`);
     err.status = res.status;
     throw err;
   }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, FlatList, StyleSheet, Image, Switch, TouchableOpacity, ActivityIndicator, Alert, TextInput, Modal, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { listRosters, createRoster, addStudentToRoster, getUsersServer, getStudentsServer, deleteRoster } from '../services/api';
+import { listRosters, createRoster, addStudentToRoster, getUsersServer, getStudentsServer, deleteRoster, getAllClearStatus } from '../services/api';
 import RosterDetail from './RosterDetail';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -28,6 +28,13 @@ export default function RostersAdmin() {
     const [selectedStudentsForCreate, setSelectedStudentsForCreate] = useState([]);
     const [error, setError] = useState(null);
     const [showBackButton, setShowBackButton] = useState(true);
+    const [allClearStatus, setAllClearStatus] = useState<{allClear: boolean; totalRosters: number; accountedRosters: number; rosterStatuses: Array<{id: string; totalStudents: number; accountedStudents: number; hasStaff: boolean; staffAccounted: boolean}>} | null>(null);
+
+    // Helper to get status for a specific roster
+    function getRosterStatus(rosterId: string) {
+        if (!allClearStatus || !allClearStatus.rosterStatuses) return null;
+        return allClearStatus.rosterStatuses.find(s => s.id === rosterId);
+    }
 
     function toggleSelectedStudentForCreate(student) {
         setSelectedStudentsForCreate(prev => {
@@ -47,6 +54,13 @@ export default function RostersAdmin() {
             const data = await listRosters();
             setRosters(data || []);
             loadStaff();
+            // Fetch all clear status
+            try {
+                const clearStatus = await getAllClearStatus();
+                setAllClearStatus(clearStatus);
+            } catch (e) {
+                console.error('Load all clear status failed', e);
+            }
         } catch (e) {
             console.error('Load rosters failed', e);
             Alert.alert('Error', e && e.message ? e.message : 'Load rosters failed');
@@ -117,31 +131,64 @@ export default function RostersAdmin() {
             <Text style={{ fontSize: 20, marginBottom: 12 }}>Rosters (Admin)</Text>
             <Button title="Refresh" onPress={loadRosters} />
 
+            {/* All Clear Status Indicator */}
+            {allClearStatus && (
+                <View style={{
+                    backgroundColor: allClearStatus.allClear ? '#4CAF50' : '#F44336',
+                    padding: 12,
+                    borderRadius: 8,
+                    marginVertical: 10,
+                    alignItems: 'center'
+                }}>
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
+                        {allClearStatus.allClear ? '✓ ALL CLEAR' : '⚠ NOT ALL CLEAR'}
+                    </Text>
+                    <Text style={{ color: '#fff', fontSize: 12, marginTop: 4 }}>
+                        {allClearStatus.accountedRosters} / {allClearStatus.totalRosters} rosters fully accounted
+                    </Text>
+                </View>
+            )}
+
             <View style={styles.rosterBox}>
                 <Text style={styles.RosterTitle}>Create new Class</Text>
                 <TextInput value={newRosterName} onChangeText={setNewRosterName} placeholder="Class name" style={{ borderWidth: 1, borderColor: '#ddd', padding: 8, marginBottom: 8 }} />
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                    <Button title={creatingRosterStaff ? `Assign: ${creatingRosterStaff.email}` : 'Select staff (optional)'} onPress={() => openStaffModal('createRoster')} />
-                    <View style={{ width: 8 }} />
-                    <Button title={selectedStudentsForCreate.length > 0 ? `Students: ${selectedStudentsForCreate.length}` : 'Select students (optional)'} onPress={() => openStudentModal()} />
-                    <View style={{ width: 8 }} />
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                    <Button title={creatingRosterStaff ? `Assign: ${creatingRosterStaff.email}` : 'Select staff'} onPress={() => openStaffModal('createRoster')} />
+                    <Button title={selectedStudentsForCreate.length > 0 ? `Students: ${selectedStudentsForCreate.length}` : 'Select students'} onPress={() => openStudentModal()} />
                     <Button title={creating ? 'Creating...' : 'Create Roster'} onPress={handleCreateRoster} />
-                    <Text style={{ color: '#c00', marginLeft: 12 }}>{error}</Text>
                 </View>
+                {error ? <Text style={{ color: '#c00', marginBottom: 8 }}>{error}</Text> : null}
             </View>
 
             <ScrollView style={styles.rosterBox} contentContainerStyle={{ paddingBottom: 80 }}>
                 <Text style={styles.RosterTitle}>All Rosters</Text>
                 {rosters.length === 0 ? <Text style={{ color: '#666' }}>No rosters</Text> : null}
-                {rosters.map(item => (
-                    <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderColor: '#eee' }}>
-                        <TouchableOpacity style={[styles.rosterRow, { flex: 1, padding: 8, backgroundColor: '#fff' }]} onPress={() => openRoster(item.id)}>
-                            <Text style={styles.RosterText}>Class: {item.name}</Text>
-                            <Text style={styles.RosterText}>Staff: {item.assignedToEmail ? `${item.assignedToEmail}` : ''}</Text>
-                        </TouchableOpacity>
-                        <Button title="Delete" color="#c00" onPress={() => confirmDeleteRoster(item.id, item.name)} />
-                    </View>
-                ))}
+                {rosters.map(item => {
+                    const status = getRosterStatus(item.id);
+                    const studentsAllClear = status ? status.accountedStudents === status.totalStudents : false;
+                    const staffClear = status ? (!status.hasStaff || status.staffAccounted) : false;
+                    return (
+                        <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderColor: '#eee' }}>
+                            <TouchableOpacity style={[styles.rosterRow, { flex: 1, padding: 8, backgroundColor: '#fff' }]} onPress={() => openRoster(item.id)}>
+                                <Text style={styles.RosterText}>Class: {item.name}</Text>
+                                <Text style={styles.RosterText}>Staff: {item.assignedToEmail ? `${item.assignedToEmail}` : ''}</Text>
+                                {status && (
+                                    <View style={{ flexDirection: 'row', marginTop: 4 }}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 12 }}>
+                                            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: staffClear ? '#4CAF50' : '#F44336', marginRight: 4 }} />
+                                            <Text style={{ fontSize: 12, color: '#666' }}>Staff</Text>
+                                        </View>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: studentsAllClear ? '#4CAF50' : '#F44336', marginRight: 4 }} />
+                                            <Text style={{ fontSize: 12, color: '#666' }}>Students ({status.accountedStudents}/{status.totalStudents})</Text>
+                                        </View>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
+                            <Button title="Delete" color="#c00" onPress={() => confirmDeleteRoster(item.id, item.name)} />
+                        </View>
+                    );
+                })}
             </ScrollView>
 
             {selectedRosterId ? (
