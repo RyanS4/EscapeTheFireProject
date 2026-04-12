@@ -187,7 +187,7 @@ export default function MapStaff() {
                                 No users with location data
                             </Text>
                         )}
-                        {userLocations.map(u => (
+                        {[...userLocations].sort((a, b) => (a.email || '').localeCompare(b.email || '')).map(u => (
                             <View key={u.id} style={styles.userItem}>
                                 <Text style={{fontWeight: '600'}}>{u.email}</Text>
                                 <Text style={{fontSize: 12, color: '#666'}}>

@@ -174,7 +174,7 @@ export default function RosterDetail({ rosterId, onClose }) {
                 </View>
             ) : (
                 <FlatList
-                    data={students}
+                    data={[...students].sort((a, b) => (a.name || `${a.firstName} ${a.lastName}`).localeCompare(b.name || `${b.firstName} ${b.lastName}`))}
                     keyExtractor={item => item.id || item._id || `${item.name || item.firstName || ''}`}
                     ListHeaderComponent={renderStaffHeader}
                     renderItem={({ item }) => (
@@ -193,7 +193,7 @@ export default function RosterDetail({ rosterId, onClose }) {
             <Modal visible={showStudentModal} animationType="slide" onRequestClose={() => setShowStudentModal(false)}>
                 <View style={{ flex: 1, padding: 16 }}>
                     <Text style={{ fontSize: 18, marginBottom: 12 }}>Select student to add</Text>
-                    <FlatList data={studentList} keyExtractor={i => i.id} renderItem={({ item }) => (
+                    <FlatList data={[...studentList].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))} keyExtractor={i => i.id} renderItem={({ item }) => (
                         <TouchableOpacity style={{ padding: 12, borderBottomWidth: 1, borderColor: '#eee', flexDirection: 'row', alignItems: 'center' }} onPress={() => { handleAddExistingStudent(item); setShowStudentModal(false); }}>
                             {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={{ width: 40, height: 40, borderRadius: 20, marginRight: 12 }} /> : <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#eee', marginRight: 12 }} />}
                             <Text style={{ fontSize: 16 }}>{item.firstName} {item.lastName}</Text>
@@ -206,7 +206,7 @@ export default function RosterDetail({ rosterId, onClose }) {
             <Modal visible={showStaffModal} animationType="slide" onRequestClose={() => setShowStaffModal(false)}>
                 <View style={{ flex: 1, padding: 16 }}>
                     <Text style={{ fontSize: 18, marginBottom: 12 }}>Assign staff (select one or choose None)</Text>
-                    <FlatList data={staffList} keyExtractor={i => i.id} renderItem={({ item }) => (
+                    <FlatList data={[...staffList].sort((a, b) => (a.email || '').localeCompare(b.email || ''))} keyExtractor={i => i.id} renderItem={({ item }) => (
                         <TouchableOpacity style={{ padding: 12, borderBottomWidth: 1, borderColor: '#eee' }} onPress={async () => { try { await assignRoster(selectedRoster.id, { staffId: item.id }); setSelectedRoster({ ...selectedRoster, assignedTo: item.id, assignedToEmail: item.email }); setShowStaffModal(false); } catch (e) { Alert.alert('Error', 'Assign failed'); } }}>
                             <Text style={{ fontSize: 16 }}>{item.email}</Text>
                         </TouchableOpacity>

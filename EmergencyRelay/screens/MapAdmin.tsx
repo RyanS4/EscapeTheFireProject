@@ -207,7 +207,7 @@ export default function MapAdmin() {
                                 No users with location data
                             </Text>
                         )}
-                        {userLocations.map((u: any) => (
+                        {[...userLocations].sort((a: any, b: any) => (a?.email || '').localeCompare(b?.email || '')).map((u: any) => (
                             <View key={u?.id || Math.random()} style={styles.userItem}>
                                 <Text style={{fontWeight: '600'}}>{u?.email || 'Unknown'}</Text>
                                 <Text style={{fontSize: 12, color: '#666'}}>

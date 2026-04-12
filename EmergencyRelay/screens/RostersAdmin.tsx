@@ -163,7 +163,7 @@ export default function RostersAdmin() {
             <ScrollView style={styles.rosterBox} contentContainerStyle={{ paddingBottom: 80 }}>
                 <Text style={styles.RosterTitle}>All Rosters</Text>
                 {rosters.length === 0 ? <Text style={{ color: '#666' }}>No rosters</Text> : null}
-                {rosters.map(item => {
+                {[...rosters].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(item => {
                     const status = getRosterStatus(item.id);
                     const studentsAllClear = status ? status.accountedStudents === status.totalStudents : false;
                     const staffClear = status ? (!status.hasStaff || status.staffAccounted) : false;
@@ -202,7 +202,7 @@ export default function RostersAdmin() {
                 <View style={{ flex: 1, padding: 16 }}>
                     <Text style={{ fontSize: 18, marginBottom: 12 }}>Select staff</Text>
                     {staffLoading ? <ActivityIndicator /> : (
-                        <FlatList data={staffList} keyExtractor={i => i.id} renderItem={({ item }) => (
+                        <FlatList data={[...staffList].sort((a, b) => (a.email || '').localeCompare(b.email || ''))} keyExtractor={i => i.id} renderItem={({ item }) => (
                             <TouchableOpacity style={{ padding: 12, borderBottomWidth: 1, borderColor: '#eee' }} onPress={() => { if (staffSelectTarget === 'assignRoster') setSelectedStaffForAssign(item); if (staffSelectTarget === 'createRoster') setCreatingRosterStaff(item); setShowStaffModal(false); }}>
                                 <Text style={{ fontSize: 16 }}>{item.email}</Text>
                             </TouchableOpacity>
@@ -216,7 +216,7 @@ export default function RostersAdmin() {
                 <View style={{ flex: 1, padding: 16 }}>
                     <Text style={{ fontSize: 18, marginBottom: 12 }}>Select student</Text>
                     {studentLoading ? <ActivityIndicator /> : (
-                        <FlatList data={studentList} keyExtractor={i => i.id} renderItem={({ item }) => (
+                        <FlatList data={[...studentList].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))} keyExtractor={i => i.id} renderItem={({ item }) => (
                             <TouchableOpacity style={{ padding: 12, borderBottomWidth: 1, borderColor: '#eee', flexDirection: 'row', alignItems: 'center' }} onPress={() => toggleSelectedStudentForCreate(item)}>
                                 {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={{ width: 40, height: 40, borderRadius: 20, marginRight: 12 }} /> : <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#eee', marginRight: 12 }} />}
                                 <Text style={{ fontSize: 16, flex: 1 }}>{item.firstName} {item.lastName}</Text>

@@ -176,7 +176,7 @@ export default function EditStaffAccount() {
                 <ActivityIndicator size="large" style={{ marginTop: 20 }} />
             ) : (
                 <FlatList
-                    data={users}
+                    data={[...users].sort((a, b) => (a.email || '').localeCompare(b.email || ''))}
                     keyExtractor={item => item.id}
                     style={{ flex: 1, width: '100%' }}
                     ListEmptyComponent={<Text style={styles.emptyText}>No users found</Text>}
