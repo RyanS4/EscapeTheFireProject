@@ -289,6 +289,78 @@ async function userFromToken(req) {
   } catch (e) { return null; }
 }
 
+// Admin: Update a user (edit staff account)
+app.patch('/admin/users/:id', async (req, res) => {
+  const { id } = req.params || {};
+  if (!id) return res.status(400).json({ error: 'missing_id' });
+  const caller = await userFromToken(req);
+  if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('admin')) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  try {
+    const user = await db.findOne({ id });
+    if (!user) return res.status(404).json({ error: 'not_found' });
+    
+    const { email, password, roles, imageUrl } = req.body || {};
+    const patch = {};
+    
+    if (email && email !== user.email) {
+      const normalized = String(email).trim().toLowerCase();
+      const existing = await db.findOne({ email: normalized });
+      if (existing && existing.id !== id) {
+        return res.status(409).json({ error: 'email_exists' });
+      }
+      patch.email = normalized;
+    }
+    if (password) {
+      patch.password_hash = hashPassword(password);
+    }
+    if (roles && Array.isArray(roles)) {
+      patch.roles = roles;
+    }
+    if (typeof imageUrl !== 'undefined') {
+      patch.imageUrl = imageUrl || null;
+    }
+    
+    if (Object.keys(patch).length === 0) {
+      return res.status(400).json({ error: 'no_changes' });
+    }
+    
+    await db.update({ id }, { $set: patch }, { multi: false });
+    const updated = await db.findOne({ id });
+    res.json({ id: updated.id, email: updated.email, roles: updated.roles, imageUrl: updated.imageUrl || null });
+  } catch (e) {
+    console.error('Update user failed', e && e.message);
+    res.status(500).json({ error: 'update_failed' });
+  }
+});
+
+// Admin: Reset user password (for forgot password)
+app.post('/admin/users/:id/reset-password', async (req, res) => {
+  const { id } = req.params || {};
+  if (!id) return res.status(400).json({ error: 'missing_id' });
+  const caller = await userFromToken(req);
+  if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('admin')) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  try {
+    const user = await db.findOne({ id });
+    if (!user) return res.status(404).json({ error: 'not_found' });
+    
+    const { newPassword } = req.body || {};
+    if (!newPassword || newPassword.length < 4) {
+      return res.status(400).json({ error: 'password_too_short' });
+    }
+    
+    const password_hash = hashPassword(newPassword);
+    await db.update({ id }, { $set: { password_hash, session: null } }, { multi: false });
+    res.json({ success: true, message: 'Password reset successfully' });
+  } catch (e) {
+    console.error('Reset password failed', e && e.message);
+    res.status(500).json({ error: 'reset_failed' });
+  }
+});
+
 app.delete('/admin/users/:id', async (req, res) => {
   const { id } = req.params || {};
   if (!id) return res.status(400).json({ error: 'missing_id' });
@@ -540,6 +612,57 @@ app.get('/students', async (req, res) => {
   } catch (e) {
     console.error('List students failed', e && e.message);
     res.status(500).json({ error: 'list_failed' });
+  }
+});
+
+// Update a student (admin only)
+app.patch('/students/:id', async (req, res) => {
+  const { id } = req.params || {};
+  if (!id) return res.status(400).json({ error: 'missing_id' });
+  const caller = await userFromToken(req);
+  if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('admin')) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  try {
+    const student = await students.findOne({ id });
+    if (!student) return res.status(404).json({ error: 'not_found' });
+    
+    const { firstName, lastName, imageUrl } = req.body || {};
+    const patch = {};
+    
+    if (firstName) patch.firstName = String(firstName).trim();
+    if (lastName) patch.lastName = String(lastName).trim();
+    if (typeof imageUrl !== 'undefined') patch.imageUrl = imageUrl || null;
+    
+    if (Object.keys(patch).length === 0) {
+      return res.status(400).json({ error: 'no_changes' });
+    }
+    
+    await students.update({ id }, { $set: patch }, { multi: false });
+    const updated = await students.findOne({ id });
+    
+    // Also update in any rosters that have this student
+    const newName = `${updated.firstName} ${updated.lastName}`;
+    const allRosters = await rosters.find({});
+    for (const r of allRosters) {
+      const rosterStudents = r.students || [];
+      let changed = false;
+      for (let i = 0; i < rosterStudents.length; i++) {
+        if (rosterStudents[i].id === id) {
+          rosterStudents[i].name = newName;
+          if (typeof imageUrl !== 'undefined') rosterStudents[i].imageUrl = updated.imageUrl;
+          changed = true;
+        }
+      }
+      if (changed) {
+        await rosters.update({ id: r.id }, { $set: { students: rosterStudents } }, { multi: false });
+      }
+    }
+    
+    res.json({ id: updated.id, firstName: updated.firstName, lastName: updated.lastName, imageUrl: updated.imageUrl });
+  } catch (e) {
+    console.error('Update student failed', e && e.message);
+    res.status(500).json({ error: 'update_failed' });
   }
 });
 
