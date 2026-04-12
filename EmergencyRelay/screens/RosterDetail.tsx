@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, FlatList, StyleSheet, Image, Switch, TouchableOpacity, ActivityIndicator, Alert, TextInput, Modal } from 'react-native';
-import { getRoster, addStudentToRoster, updateStudentInRoster, getStudentsServer, deleteStudentFromRoster, getUsersServer, assignRoster } from '../services/api';
+import { getRoster, addStudentToRoster, updateStudentInRoster, getStudentsServer, deleteStudentFromRoster, getUsersServer, assignRoster, getUserLocationsServer, updateRoster } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function RosterDetail({ rosterId, onClose }) {
@@ -12,6 +12,8 @@ export default function RosterDetail({ rosterId, onClose }) {
     const [showStudentModal, setShowStudentModal] = useState(false);
     const [staffList, setStaffList] = useState([]);
     const [showStaffModal, setShowStaffModal] = useState(false);
+    const [staffLocation, setStaffLocation] = useState<string | null>(null);
+    const [staffAccounted, setStaffAccounted] = useState(false);
 
     useEffect(() => {
         if (rosterId) openRoster(rosterId);
@@ -23,6 +25,25 @@ export default function RosterDetail({ rosterId, onClose }) {
             const r = await getRoster(id);
             setSelectedRoster(r);
             setStudents(r.students || []);
+            setStaffAccounted(r.staffAccounted || false);
+            
+            // Fetch staff location if roster has assigned staff
+            if (r.assignedTo) {
+                try {
+                    const locations = await getUserLocationsServer();
+                    const staffUser = locations.find(u => u.id === r.assignedTo);
+                    if (staffUser && staffUser.lastLocation && staffUser.lastLocation.room) {
+                        setStaffLocation(staffUser.lastLocation.room);
+                    } else {
+                        setStaffLocation(null);
+                    }
+                } catch (locErr) {
+                    console.error('Failed to fetch staff location', locErr);
+                    setStaffLocation(null);
+                }
+            } else {
+                setStaffLocation(null);
+            }
         } catch (e) {
             console.error('Open roster failed', e);
             Alert.alert('Error', e && e.message ? e.message : 'Open roster failed');
@@ -92,6 +113,40 @@ export default function RosterDetail({ rosterId, onClose }) {
         }
     }
 
+    async function toggleStaffAccounted(value: boolean) {
+        if (!selectedRoster) return;
+        try {
+            await updateRoster(selectedRoster.id, { staffAccounted: value });
+            setStaffAccounted(value);
+        } catch (e) {
+            console.error('Update staff accounted failed', e);
+            Alert.alert('Error', e && e.message ? e.message : 'Update failed');
+        }
+    }
+
+    // Render staff row at the top of the list
+    const renderStaffHeader = () => {
+        if (!selectedRoster || !selectedRoster.assignedTo) return null;
+        return (
+            <View style={styles.row}>
+                {selectedRoster.staffImageUrl ? (
+                    <Image source={{ uri: selectedRoster.staffImageUrl }} style={styles.avatar} />
+                ) : (
+                    <View style={[styles.avatar, { backgroundColor: '#4a90d9' }]}>
+                        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>S</Text>
+                    </View>
+                )}
+                <View style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: 'bold' }}>{selectedRoster.assignedToEmail || 'Staff Member'}</Text>
+                    <Text style={{ fontSize: 12, color: '#666' }}>
+                        Location: {staffLocation || 'Unknown'}
+                    </Text>
+                </View>
+                <Switch value={staffAccounted} onValueChange={toggleStaffAccounted} />
+            </View>
+        );
+    };
+
     return (
         <View style={styles.container}>
             <View style={{ padding: 8, flexDirection: 'row', alignItems: 'center' }}>
@@ -121,6 +176,7 @@ export default function RosterDetail({ rosterId, onClose }) {
                 <FlatList
                     data={students}
                     keyExtractor={item => item.id || item._id || `${item.name || item.firstName || ''}`}
+                    ListHeaderComponent={renderStaffHeader}
                     renderItem={({ item }) => (
                         <View style={styles.row}>
                             {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={styles.avatar} /> : <View style={[styles.avatar, { backgroundColor: '#eee' }]} />}
@@ -182,7 +238,9 @@ const styles = StyleSheet.create({
         width: 48, 
         height: 48, 
         borderRadius: 24, 
-        marginRight: 12 
+        marginRight: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     container: {
         flex: 1,

@@ -44,7 +44,7 @@ const roomsByFloor: { [key: number]: RoomArea[] } = {
     1: [
         // Far left wing rooms
         { id: 'room-2', name: 'Room 2', type: 'room', x: 2.5, y: 38.5, width: 7, height: 18 },
-        { id: 'room-4', name: 'Room 4', type: 'room', x: 30, y: 38.5, width: 5, height: 11 },
+        { id: 'room-4', name: 'Room 4', type: 'room', x: 32.4, y: 38.5, width: 5, height: 11 },
         { id: 'room-7', name: 'Room 7', type: 'room', x: 1, y: 55, width: 5, height: 12 },
         
         // Main Hall (vertical)
