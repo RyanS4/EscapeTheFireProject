@@ -85,7 +85,7 @@ function RootNavigator() {
     return (
       <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Login" component={Login} />
-        <Stack.Screen name="Instructions" component={Instructions} />
+        <Stack.Screen name="Instructions" component={Instructions} options={{ headerShown: true }} />
       </Stack.Navigator>
     );
   }

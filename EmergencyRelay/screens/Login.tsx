@@ -57,7 +57,7 @@ const Login = () => {
 
       <Button title="Login" onPress={handleLogin} />
       <View style={{ height: 16 }} />
-      <Button title="Help" onPress={() => (navigation as any).navigate('Instructions')} />
+      <Button title="Instructions" onPress={() => (navigation as any).navigate('Instructions')} />
       <Text style={styles.error}>{error}</Text>
       <Image style={styles.logo} source={require('../assets/BoysAndGirlsClubLogo.png')} />
     </View>
