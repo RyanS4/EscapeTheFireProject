@@ -1,6 +1,7 @@
 // contexts/EmergencyContext.tsx
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { getActiveEmergency, endEmergencyServer } from '../services/api';
+import { useAuth } from './AuthContext';
 
 export interface EmergencyLocation {
   room: string;
@@ -62,6 +63,7 @@ const defaultEvacuationState: UserEvacuationState = {
 const EmergencyContext = createContext<EmergencyContextType | null>(null);
 
 export function EmergencyProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [emergencyState, setEmergencyState] = useState<EmergencyState>(defaultEmergencyState);
   const [userEvacuation, setUserEvacuation] = useState<UserEvacuationState>(defaultEvacuationState);
   const [isLoading, setIsLoading] = useState(false);
@@ -144,15 +146,23 @@ export function EmergencyProvider({ children }: { children: React.ReactNode }) {
     }
   }, [emergencyState.isActive]);
 
-  // Poll for emergency state changes
+  // Poll for emergency state changes (only when logged in)
   useEffect(() => {
+    // Don't poll if user is not logged in
+    if (!user) {
+      // Reset state when user logs out
+      setEmergencyState(defaultEmergencyState);
+      setUserEvacuation(defaultEvacuationState);
+      return;
+    }
+
     // Initial fetch
     refreshEmergencyState();
 
     // Poll every 5 seconds for emergency updates
     const interval = setInterval(refreshEmergencyState, 5000);
     return () => clearInterval(interval);
-  }, [refreshEmergencyState]);
+  }, [user, refreshEmergencyState]);
 
   return (
     <EmergencyContext.Provider
