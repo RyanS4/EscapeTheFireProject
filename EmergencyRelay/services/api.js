@@ -820,6 +820,70 @@ export async function cancelAlertServer(alertId, baseUrl) {
   return res.json();
 }
 
+// ============================================
+// EMERGENCY STATE API FUNCTIONS
+// ============================================
+
+/**
+ * Get the currently active emergency (if any)
+ * Returns { active: boolean, emergency: EmergencyData | null }
+ */
+export async function getActiveEmergency(baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/emergency/active`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`Get active emergency failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  const data = await res.json();
+  // Return the emergency object directly if active, or null
+  return data.active ? data.emergency : null;
+}
+
+/**
+ * End an active emergency (All Clear) - Admin only
+ */
+export async function endEmergencyServer(emergencyId, baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/emergency/${emergencyId}/end`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`End emergency failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+/**
+ * Get emergency history (Admin only)
+ */
+export async function getEmergencyHistory(baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/emergency/history`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`Get emergency history failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
 /**
  * Register push token for the current user
  */

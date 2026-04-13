@@ -15,6 +15,7 @@ const Stack = createStackNavigator();
 import { NavigationContainer } from '@react-navigation/native';
 import { StyleSheet, Platform } from 'react-native';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { EmergencyProvider } from './contexts/EmergencyContext';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
@@ -136,7 +137,9 @@ export default function App() {
   return (
     <NavigationContainer>
       <AuthProvider>
-        <RootNavigator />
+        <EmergencyProvider>
+          <RootNavigator />
+        </EmergencyProvider>
       </AuthProvider>
     </NavigationContainer>
   );

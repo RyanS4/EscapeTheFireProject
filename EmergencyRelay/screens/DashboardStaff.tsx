@@ -1,12 +1,14 @@
-import {View, Text, TextInput, Button, StyleSheet, Alert, Platform} from 'react-native';
+import {View, Text, TextInput, Button, StyleSheet, Alert, Platform, ScrollView} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
+import { useEmergency } from '../contexts/EmergencyContext';
 import React, {useState} from 'react';
 
 const DashboardStaff = () => {
     
     const navigation = useNavigation();
-    const { signOut } = useAuth();  
+    const { signOut } = useAuth();
+    const { emergencyState } = useEmergency();  
 
     function handleAlertInitiation() {
         // Handle alert initiation logic here
@@ -57,8 +59,32 @@ const DashboardStaff = () => {
     
 
     return (
-        <View style={styles.container}>
-            <View style={styles.containerBox}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContainer}>
+            {/* Active Emergency Banner */}
+            {emergencyState.isActive && (
+                <View style={styles.emergencyBanner}>
+                    <Text style={styles.emergencyBannerTitle}>ACTIVE EMERGENCY</Text>
+                    <Text style={styles.emergencyBannerText}>
+                        Type: {emergencyState.type}
+                    </Text>
+                    <Text style={styles.emergencyBannerText}>
+                        Location: {emergencyState.location?.room} (Floor {emergencyState.location?.floor})
+                    </Text>
+                    <Text style={styles.emergencyBannerSubtext}>
+                        Follow evacuation procedures immediately.
+                    </Text>
+                    <View style={{ marginTop: 10 }}>
+                        <Button 
+                            title="Go to Emergency Map"
+                            onPress={() => (navigation as any).navigate('MapStaff')}
+                            color="#fff"
+                        />
+                    </View>
+                </View>
+            )}
+
+            <View style={styles.container}>
+                <View style={styles.containerBox}>
                 <Text style={styles.title}>Emergency Management</Text>
                 <Text style={styles.caption}>From here you can initiate alerts and your class roster(s)</Text>
                 <View style={{ height: 16 }} />
@@ -73,16 +99,25 @@ const DashboardStaff = () => {
             <View style={{width: '100%', maxWidth: 400}}>
                 <Button title="Logout" onPress={handleLogout} />
             </View>
-        </View>
+            </View>
+        </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
+    scrollView: {
+        flex: 1,
+        backgroundColor: '#ffffffff',
+    },
+    scrollContainer: {
+        flexGrow: 1,
+    },
     container: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#ffffffff',
+        padding: 16,
     },
     containerBox: {
         width: '100%',
@@ -104,6 +139,29 @@ const styles = StyleSheet.create({
         color: '#666',
         marginBottom: 8,
         textAlign: 'center',
+    },
+    // Emergency banner styles
+    emergencyBanner: {
+        width: '100%',
+        backgroundColor: '#d32f2f',
+        padding: 16,
+        alignItems: 'center',
+    },
+    emergencyBannerTitle: {
+        color: '#fff',
+        fontSize: 22,
+        fontWeight: 'bold',
+        marginBottom: 8,
+    },
+    emergencyBannerText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    emergencyBannerSubtext: {
+        color: 'rgba(255,255,255,0.8)',
+        fontSize: 12,
+        marginTop: 4,
     },
 });
 

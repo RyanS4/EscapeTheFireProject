@@ -1,6 +1,7 @@
-import {View, Text, Button, StyleSheet, TextInput, ScrollView, Alert, Dimensions} from 'react-native';
+import {View, Text, Button, StyleSheet, TextInput, ScrollView, Alert, Dimensions, Platform} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
+import { useEmergency } from '../contexts/EmergencyContext';
 import React, {useState, useEffect} from 'react';
 import { getUserLocationsServer, getActiveAlertsServer, createAlertServer, confirmAlertServer, cancelAlertServer } from '../services/api';
 import { ReportBox } from '../models/Report';
@@ -17,6 +18,7 @@ interface AlertData {
 export default function MapAdmin() {
     const navigation = useNavigation();
     const { user } = useAuth();
+    const { emergencyState, endEmergency, refreshEmergencyState } = useEmergency();
     const [userLocations, setUserLocations] = useState([]);
     const [loading, setLoading] = useState(false);
     const [locationError, setLocationError] = useState<string | null>(null);
@@ -26,6 +28,7 @@ export default function MapAdmin() {
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [alertLocation, setAlertLocation] = useState('');
     const [alertType, setAlertType] = useState('');
+    const [endingEmergency, setEndingEmergency] = useState(false);
 
     function handleBack() {
         (navigation as any).goBack();
@@ -108,9 +111,45 @@ export default function MapAdmin() {
             console.log('[MapAdmin] ✓ Alert confirmed successfully. Notifications should be sent.');
             setAlerts(alerts.filter(a => a.id !== selectedAlert.id));
             setSelectedAlert(null);
+            // Refresh emergency state to pick up the new active emergency
+            await refreshEmergencyState();
         } catch (e) {
             console.error('[MapAdmin] Failed to confirm alert:', e);
             setFormError(e && e.message ? e.message : 'Failed to confirm alert');
+        }
+    }
+
+    async function handleEndEmergency() {
+        if (!emergencyState.isActive || !emergencyState.emergencyId) return;
+        
+        const confirmEnd = () => {
+            setEndingEmergency(true);
+            endEmergency(emergencyState.emergencyId!)
+                .then(() => {
+                    console.log('[MapAdmin] Emergency ended successfully');
+                    setFormError(null);
+                })
+                .catch((e) => {
+                    console.error('[MapAdmin] Failed to end emergency:', e);
+                    setFormError(e?.message || 'Failed to end emergency');
+                })
+                .finally(() => {
+                    setEndingEmergency(false);
+                });
+        };
+
+        if (Platform.OS === 'web') {
+            const confirmed = window.confirm('Are you sure you want to end the emergency and declare All Clear?');
+            if (confirmed) confirmEnd();
+        } else {
+            Alert.alert(
+                'End Emergency',
+                'Are you sure you want to end the emergency and declare All Clear?',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'End Emergency', style: 'destructive', onPress: confirmEnd }
+                ]
+            );
         }
     }
 
@@ -181,6 +220,27 @@ export default function MapAdmin() {
             showsVerticalScrollIndicator={true}
         >
             <View style={styles.container}>
+                {/* Active Emergency Banner */}
+                {emergencyState.isActive && (
+                    <View style={styles.emergencyBanner}>
+                        <Text style={styles.emergencyBannerTitle}>ACTIVE EMERGENCY</Text>
+                        <Text style={styles.emergencyBannerText}>
+                            Type: {emergencyState.type} | Location: {emergencyState.location?.room}
+                        </Text>
+                        <Text style={styles.emergencyBannerSubtext}>
+                            Started: {emergencyState.startedAt?.toLocaleTimeString()}
+                        </Text>
+                        <View style={{ marginTop: 10 }}>
+                            <Button 
+                                title={endingEmergency ? "Ending..." : "End Emergency (All Clear)"}
+                                onPress={handleEndEmergency}
+                                color="#fff"
+                                disabled={endingEmergency}
+                            />
+                        </View>
+                    </View>
+                )}
+
                 {/* Floor Map at the top */}
                 <View style={styles.floorMapContainer}>
                     <FloorMap 
@@ -190,6 +250,8 @@ export default function MapAdmin() {
                         showGrid={true}
                         gridRows={10}
                         gridCols={10}
+                        emergencyMode={emergencyState.isActive}
+                        emergencyLocation={emergencyState.location?.room || null}
                     />
                 </View>
 
@@ -284,10 +346,10 @@ export default function MapAdmin() {
             ) : null}
 
             <View style={{ height: 16 }} />
-            {!showCreateForm && !selectedAlert && (
+            {!showCreateForm && !selectedAlert && !emergencyState.isActive && (
                 <Button title="Create Alert" onPress={handleOpenCreateForm} />
             )}
-            {!showCreateForm && !selectedAlert && (
+            {!showCreateForm && !selectedAlert && !emergencyState.isActive && (
                 <View style={{ height: 16 }} />
             )}
             <Button title="Back" onPress={handleBack} />
@@ -391,5 +453,29 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         gap: 8,
         marginVertical: 8,
-    }
+    },
+    // Emergency banner styles
+    emergencyBanner: {
+        width: '100%',
+        backgroundColor: '#d32f2f',
+        padding: 16,
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    emergencyBannerTitle: {
+        color: '#fff',
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 4,
+    },
+    emergencyBannerText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    emergencyBannerSubtext: {
+        color: 'rgba(255,255,255,0.8)',
+        fontSize: 12,
+        marginTop: 4,
+    },
 });

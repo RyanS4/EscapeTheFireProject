@@ -182,9 +182,22 @@ interface FloorMapProps {
     showGrid?: boolean; // Toggle grid visibility
     gridRows?: number; // Number of grid rows
     gridCols?: number; // Number of grid columns
+    emergencyMode?: boolean; // When true, disables room clicks and shows emergency styling
+    emergencyLocation?: string | null; // Room name/id where emergency is located
+    escapePath?: { roomId: string; floor: number }[]; // Placeholder for escape route path
 }
 
-export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedStairwellGroup = null, showGrid = true, gridRows = 10, gridCols = 10 }: FloorMapProps) {
+export default function FloorMap({ 
+    onRoomPress, 
+    highlightedRooms = [], 
+    selectedStairwellGroup = null, 
+    showGrid = true, 
+    gridRows = 10, 
+    gridCols = 10,
+    emergencyMode = false,
+    emergencyLocation = null,
+    escapePath = [],
+}: FloorMapProps) {
     const [currentFloor, setCurrentFloor] = useState(1);
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
     const [imageLayout, setImageLayout] = useState({ offsetX: 0, offsetY: 0, width: 0, height: 0 });
@@ -246,9 +259,20 @@ export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedS
     };
 
     const handleRoomPress = (room: RoomArea) => {
+        // Disable room interactions during emergency mode
+        if (emergencyMode) {
+            return;
+        }
         if (onRoomPress) {
             onRoomPress(currentFloor, room.id, room.name, room.type, room.stairwellGroup);
         }
+    };
+
+    // Check if a room is the emergency location
+    const isEmergencyRoom = (room: RoomArea) => {
+        if (!emergencyMode || !emergencyLocation) return false;
+        return room.name.toLowerCase().includes(emergencyLocation.toLowerCase()) ||
+               emergencyLocation.toLowerCase().includes(room.name.toLowerCase());
     };
 
     // Render 2D grid overlay
@@ -370,8 +394,15 @@ export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedS
 
     return (
         <View style={styles.container}>
+            {/* Emergency Mode Banner */}
+            {emergencyMode && (
+                <View style={styles.emergencyBanner}>
+                    <Text style={styles.emergencyBannerText}>EMERGENCY MODE</Text>
+                </View>
+            )}
+
             {/* Floor selector header */}
-            <View style={styles.header}>
+            <View style={[styles.header, emergencyMode && styles.headerEmergency]}>
                 <TouchableOpacity onPress={goToPrevFloor} style={styles.arrowButton}>
                     <Text style={styles.arrowText}>◀</Text>
                 </TouchableOpacity>
@@ -425,6 +456,7 @@ export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedS
                 {currentRooms.map(room => {
                     const isHighlighted = highlightedRooms.includes(room.id);
                     const isStairSelected = isStairwellSelected(room);
+                    const isEmergency = isEmergencyRoom(room);
                     return (
                         <Pressable
                             key={room.id}
@@ -434,11 +466,15 @@ export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedS
                                 room.type === 'hall' && styles.hallOverlay,
                                 isHighlighted && styles.roomHighlighted,
                                 isStairSelected && styles.stairwellSelected,
+                                isEmergency && styles.roomEmergency,
+                                emergencyMode && styles.roomDisabled,
                                 getRoomStyle(room),
-                                pressed && styles.roomPressed,
-                                Platform.OS === 'web' && { cursor: 'pointer' } as any,
+                                pressed && !emergencyMode && styles.roomPressed,
+                                Platform.OS === 'web' && !emergencyMode && { cursor: 'pointer' } as any,
+                                Platform.OS === 'web' && emergencyMode && { cursor: 'not-allowed' } as any,
                             ]}
                             onPress={() => handleRoomPress(room)}
+                            disabled={emergencyMode}
                         >
                             <Text style={[
                                 styles.roomLabel,
@@ -446,12 +482,20 @@ export default function FloorMap({ onRoomPress, highlightedRooms = [], selectedS
                                 room.type === 'hall' && styles.hallLabel,
                                 isHighlighted && styles.roomLabelHighlighted,
                                 isStairSelected && styles.stairwellLabelSelected,
+                                isEmergency && styles.roomLabelEmergency,
                             ]} numberOfLines={1} adjustsFontSizeToFit>
-                                {room.name}
+                                {isEmergency ? '⚠️ ' + room.name : room.name}
                             </Text>
                         </Pressable>
                     );
                 })}
+
+                {/* Escape Path Placeholder - TODO: Implement actual path rendering */}
+                {emergencyMode && escapePath.length > 0 && (
+                    <View style={styles.escapePathOverlay} pointerEvents="none">
+                        <Text style={styles.escapePathText}>Escape route will be displayed here</Text>
+                    </View>
+                )}
             </View>
         </View>
     );
@@ -594,6 +638,49 @@ const styles = StyleSheet.create({
     gridToggleButtonText: {
         color: '#fff',
         fontSize: 16,
+        fontWeight: 'bold',
+    },
+    // Emergency mode styles
+    emergencyBanner: {
+        backgroundColor: '#d32f2f',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        alignItems: 'center',
+    },
+    emergencyBannerText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    headerEmergency: {
+        backgroundColor: '#b71c1c',
+    },
+    roomEmergency: {
+        backgroundColor: 'rgba(211, 47, 47, 0.7)',
+        borderColor: '#d32f2f',
+        borderWidth: 3,
+    },
+    roomLabelEmergency: {
+        color: '#fff',
+        backgroundColor: 'rgba(211, 47, 47, 0.9)',
+        fontWeight: 'bold',
+    },
+    roomDisabled: {
+        opacity: 0.7,
+    },
+    escapePathOverlay: {
+        position: 'absolute',
+        bottom: 10,
+        left: 10,
+        right: 10,
+        backgroundColor: 'rgba(76, 175, 80, 0.9)',
+        padding: 10,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    escapePathText: {
+        color: '#fff',
+        fontSize: 12,
         fontWeight: 'bold',
     },
 });

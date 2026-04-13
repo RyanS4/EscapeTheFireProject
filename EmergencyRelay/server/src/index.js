@@ -80,6 +80,10 @@ const alerts = nedb.create({ filename: alertsFile, autoload: true });
 const pushTokensFile = path.join(DB_DIR, 'push_tokens.db');
 const pushTokens = nedb.create({ filename: pushTokensFile, autoload: true });
 
+// Create a NeDB for active emergencies (confirmed alerts become emergencies)
+const emergenciesFile = path.join(DB_DIR, 'emergencies.db');
+const emergencies = nedb.create({ filename: emergenciesFile, autoload: true });
+
 async function migrateRostersFromJson() {
   const jsonFile = path.join(__dirname, '../data/rosters.json');
   try {
@@ -446,6 +450,15 @@ app.delete('/admin/users/:id', async (req, res) => {
   const caller = await userFromToken(req);
   if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('admin')) {
     return res.status(403).json({ error: 'forbidden' });
+  }
+  // Prevent deleting the last admin account
+  const targetUser = await db.findOne({ id });
+  if (targetUser && Array.isArray(targetUser.roles) && targetUser.roles.includes('admin')) {
+    const allUsers = await db.find({});
+    const adminCount = allUsers.filter(u => Array.isArray(u.roles) && u.roles.includes('admin')).length;
+    if (adminCount <= 1) {
+      return res.status(400).json({ error: 'cannot_delete_last_admin', message: 'Cannot delete the last admin account' });
+    }
   }
   const info = await db.remove({ id }, { multi: false });
   if (!info || info === 0) return res.status(404).json({ error: 'not_found' });
@@ -1063,7 +1076,7 @@ app.post('/alerts', async (req, res) => {
   }
 });
 
-// Confirm/resolve an alert (admin only)
+// Confirm/resolve an alert (admin only) - Creates an active emergency
 app.post('/alerts/:id/confirm', async (req, res) => {
   const caller = await userFromToken(req);
   if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('admin')) {
@@ -1074,12 +1087,33 @@ app.post('/alerts/:id/confirm', async (req, res) => {
     const alert = await alerts.findOne({ id });
     if (!alert) return res.status(404).json({ error: 'not_found' });
     
-    // Send emergency notifications to all users before removing the alert
+    // Check if there's already an active emergency
+    const existingEmergency = await emergencies.findOne({ status: 'active' });
+    if (existingEmergency) {
+      return res.status(409).json({ error: 'emergency_already_active', message: 'An emergency is already in progress' });
+    }
+    
+    // Create an active emergency from this alert
+    const emergency = {
+      id: alert.id,
+      location: alert.location,
+      staff: alert.staff,
+      type: alert.type,
+      status: 'active',
+      confirmed_by: caller.email,
+      confirmed_at: new Date().toISOString(),
+      created_at: alert.created_at
+    };
+    await emergencies.insert(emergency);
+    
+    // Send emergency notifications to all users
     await sendEmergencyNotifications(alert);
     
-    // Remove the alert
+    // Remove the alert (it's now an emergency)
     await alerts.remove({ id }, { multi: false });
-    res.json({ success: true });
+    
+    console.log(`[Emergency] Emergency ${emergency.id} activated by ${caller.email}`);
+    res.json({ success: true, emergency });
   } catch (e) {
     console.error('Confirm alert failed', e && e.message);
     res.status(500).json({ error: 'confirm_failed' });
@@ -1099,6 +1133,90 @@ app.post('/alerts/:id/cancel', async (req, res) => {
   } catch (e) {
     console.error('Cancel alert failed', e && e.message);
     res.status(500).json({ error: 'cancel_failed' });
+  }
+});
+
+// ============================================
+// EMERGENCY STATE ENDPOINTS
+// ============================================
+
+// Get the currently active emergency (if any)
+app.get('/emergency/active', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller) return res.status(401).json({ error: 'no_auth' });
+  try {
+    const activeEmergency = await emergencies.findOne({ status: 'active' });
+    if (!activeEmergency) {
+      return res.json({ active: false, emergency: null });
+    }
+    res.json({
+      active: true,
+      emergency: {
+        id: activeEmergency.id,
+        location: activeEmergency.location,
+        type: activeEmergency.type,
+        staff: activeEmergency.staff,
+        confirmed_by: activeEmergency.confirmed_by,
+        confirmed_at: activeEmergency.confirmed_at,
+        created_at: activeEmergency.created_at
+      }
+    });
+  } catch (e) {
+    console.error('Get active emergency failed', e && e.message);
+    res.status(500).json({ error: 'get_failed' });
+  }
+});
+
+// End emergency / All Clear (admin only)
+app.post('/emergency/:id/end', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('admin')) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  const { id } = req.params || {};
+  try {
+    const emergency = await emergencies.findOne({ id, status: 'active' });
+    if (!emergency) {
+      return res.status(404).json({ error: 'not_found', message: 'No active emergency found with that ID' });
+    }
+    
+    // Update emergency status to ended
+    await emergencies.update(
+      { id },
+      { $set: { 
+        status: 'ended', 
+        ended_by: caller.email, 
+        ended_at: new Date().toISOString() 
+      }}
+    );
+    
+    console.log(`[Emergency] Emergency ${id} ended by ${caller.email}`);
+    
+    // TODO: Send "All Clear" notifications to all users
+    // This could be implemented similar to sendEmergencyNotifications
+    
+    res.json({ success: true, message: 'Emergency ended - All Clear' });
+  } catch (e) {
+    console.error('End emergency failed', e && e.message);
+    res.status(500).json({ error: 'end_failed' });
+  }
+});
+
+// Get emergency history (admin only)
+app.get('/emergency/history', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('admin')) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  try {
+    const allEmergencies = await emergencies.find({});
+    const sorted = allEmergencies.sort((a, b) => 
+      new Date(b.confirmed_at || b.created_at).getTime() - new Date(a.confirmed_at || a.created_at).getTime()
+    );
+    res.json(sorted);
+  } catch (e) {
+    console.error('Get emergency history failed', e && e.message);
+    res.status(500).json({ error: 'get_failed' });
   }
 });
 
