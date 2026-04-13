@@ -1,4 +1,4 @@
-import {View, Text, Button, StyleSheet, TextInput, ScrollView, Alert, Dimensions, Platform} from 'react-native';
+import {View, Text, Button, StyleSheet, TextInput, ScrollView, Alert, Dimensions, Platform, TouchableOpacity} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import { useEmergency } from '../contexts/EmergencyContext';
@@ -104,18 +104,47 @@ export default function MapAdmin() {
 
     async function handleConfirmAlert() {
         if (!selectedAlert) return;
-        try {
-            console.log('[MapAdmin] Confirming alert:', selectedAlert.id);
-            console.log('[MapAdmin] Alert details:', selectedAlert);
-            await confirmAlertServer(selectedAlert.id);
-            console.log('[MapAdmin] ✓ Alert confirmed successfully. Notifications should be sent.');
-            setAlerts(alerts.filter(a => a.id !== selectedAlert.id));
-            setSelectedAlert(null);
-            // Refresh emergency state to pick up the new active emergency
-            await refreshEmergencyState();
-        } catch (e) {
-            console.error('[MapAdmin] Failed to confirm alert:', e);
-            setFormError(e && e.message ? e.message : 'Failed to confirm alert');
+        
+        const confirmWithEvacuation = async (requiresEvacuation: boolean) => {
+            try {
+                console.log('[MapAdmin] Confirming alert:', selectedAlert.id, 'evacuation:', requiresEvacuation);
+                await confirmAlertServer(selectedAlert.id, { requiresEvacuation }, undefined);
+                console.log('[MapAdmin] ✓ Alert confirmed successfully. Notifications should be sent.');
+                setAlerts(alerts.filter(a => a.id !== selectedAlert.id));
+                setSelectedAlert(null);
+                // Refresh emergency state to pick up the new active emergency
+                await refreshEmergencyState();
+            } catch (e) {
+                console.error('[MapAdmin] Failed to confirm alert:', e);
+                setFormError(e && e.message ? e.message : 'Failed to confirm alert');
+            }
+        };
+
+        // Ask admin if evacuation is required
+        if (Platform.OS === 'web') {
+            const requiresEvacuation = window.confirm(
+                'Does this emergency require a BUILDING EVACUATION?\n\n' +
+                'Click OK for evacuation required\n' +
+                'Click Cancel for no evacuation needed'
+            );
+            confirmWithEvacuation(requiresEvacuation);
+        } else {
+            Alert.alert(
+                'Confirm Emergency',
+                'Does this emergency require a building evacuation?',
+                [
+                    { 
+                        text: 'No Evacuation', 
+                        style: 'cancel',
+                        onPress: () => confirmWithEvacuation(false)
+                    },
+                    { 
+                        text: 'Evacuation Required', 
+                        style: 'destructive', 
+                        onPress: () => confirmWithEvacuation(true)
+                    }
+                ]
+            );
         }
     }
 
@@ -227,17 +256,27 @@ export default function MapAdmin() {
                         <Text style={styles.emergencyBannerText}>
                             Type: {emergencyState.type} | Location: {emergencyState.location?.room}
                         </Text>
+                        {emergencyState.requiresEvacuation ? (
+                            <Text style={styles.emergencyBannerEvacuation}>
+                                EVACUATION REQUIRED
+                            </Text>
+                        ) : (
+                            <Text style={styles.emergencyBannerSubtext}>
+                                Shelter in place. No evacuation required.
+                            </Text>
+                        )}
                         <Text style={styles.emergencyBannerSubtext}>
                             Started: {emergencyState.startedAt?.toLocaleTimeString()}
                         </Text>
-                        <View style={{ marginTop: 10 }}>
-                            <Button 
-                                title={endingEmergency ? "Ending..." : "End Emergency (All Clear)"}
-                                onPress={handleEndEmergency}
-                                color="#fff"
-                                disabled={endingEmergency}
-                            />
-                        </View>
+                        <TouchableOpacity 
+                            style={[styles.endEmergencyButton, endingEmergency && styles.endEmergencyButtonDisabled]}
+                            onPress={handleEndEmergency}
+                            disabled={endingEmergency}
+                        >
+                            <Text style={styles.endEmergencyButtonText}>
+                                {endingEmergency ? "Ending..." : "End Emergency (All Clear)"}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                 )}
 
@@ -473,9 +512,34 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
+    emergencyBannerEvacuation: {
+        color: '#ffeb3b',
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginTop: 8,
+        marginBottom: 4,
+    },
     emergencyBannerSubtext: {
         color: 'rgba(255,255,255,0.8)',
         fontSize: 12,
         marginTop: 4,
+    },
+    endEmergencyButton: {
+        marginTop: 12,
+        backgroundColor: '#fff',
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        borderRadius: 8,
+        borderWidth: 2,
+        borderColor: '#b71c1c',
+    },
+    endEmergencyButtonDisabled: {
+        opacity: 0.6,
+    },
+    endEmergencyButtonText: {
+        color: '#b71c1c',
+        fontSize: 16,
+        fontWeight: 'bold',
+        textAlign: 'center',
     },
 });

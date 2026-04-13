@@ -173,15 +173,26 @@ export default function MapStaff() {
                         <Text style={styles.emergencyBannerText}>
                             Type: {emergencyState.type} | Location: {emergencyState.location?.room}
                         </Text>
-                        <Text style={styles.emergencyBannerSubtext}>
-                            Follow evacuation procedures. Map interactions disabled.
-                        </Text>
-                        {/* Placeholder for escape route info */}
-                        <View style={styles.escapeRouteInfo}>
-                            <Text style={styles.escapeRouteText}>
-                                Escape route will be displayed once location is detected
+                        {emergencyState.requiresEvacuation ? (
+                            <>
+                                <Text style={styles.emergencyBannerEvacuation}>
+                                    EVACUATION REQUIRED
+                                </Text>
+                                <Text style={styles.emergencyBannerSubtext}>
+                                    Follow evacuation procedures. Map interactions disabled.
+                                </Text>
+                                {/* Placeholder for escape route info */}
+                                <View style={styles.escapeRouteInfo}>
+                                    <Text style={styles.escapeRouteText}>
+                                        Escape route will be displayed once location is detected
+                                    </Text>
+                                </View>
+                            </>
+                        ) : (
+                            <Text style={styles.emergencyBannerSubtext}>
+                                Shelter in place. No evacuation required.
                             </Text>
-                        </View>
+                        )}
                     </View>
                 )}
 
@@ -408,6 +419,13 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
+    },
+    emergencyBannerEvacuation: {
+        color: '#ffeb3b',
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginTop: 8,
+        marginBottom: 4,
     },
     emergencyBannerSubtext: {
         color: 'rgba(255,255,255,0.8)',

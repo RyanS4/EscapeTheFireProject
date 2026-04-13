@@ -90,6 +90,15 @@ const DashboardAdmin = () => {
                     <Text style={styles.emergencyBannerText}>
                         Location: {emergencyState.location?.room} (Floor {emergencyState.location?.floor})
                     </Text>
+                    {emergencyState.requiresEvacuation ? (
+                        <Text style={styles.emergencyBannerEvacuation}>
+                            EVACUATION REQUIRED
+                        </Text>
+                    ) : (
+                        <Text style={styles.emergencyBannerSubtext}>
+                            Shelter in place. No evacuation required.
+                        </Text>
+                    )}
                     <Text style={styles.emergencyBannerSubtext}>
                         Started: {emergencyState.startedAt?.toLocaleTimeString()} | By: {emergencyState.declaredBy}
                     </Text>
@@ -191,6 +200,12 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
+    },
+    emergencyBannerEvacuation: {
+        color: '#ffeb3b',
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginTop: 8,
     },
     emergencyBannerSubtext: {
         color: 'rgba(255,255,255,0.8)',

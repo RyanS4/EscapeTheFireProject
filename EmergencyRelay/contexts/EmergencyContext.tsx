@@ -15,6 +15,7 @@ export interface EmergencyState {
   location: EmergencyLocation | null;
   startedAt: Date | null;
   declaredBy: string | null;
+  requiresEvacuation: boolean;
 }
 
 export interface UserEvacuationState {
@@ -48,6 +49,7 @@ const defaultEmergencyState: EmergencyState = {
   location: null,
   startedAt: null,
   declaredBy: null,
+  requiresEvacuation: false,
 };
 
 const defaultEvacuationState: UserEvacuationState = {
@@ -93,6 +95,7 @@ export function EmergencyProvider({ children }: { children: React.ReactNode }) {
           },
           startedAt: emergency.confirmed_at ? new Date(emergency.confirmed_at) : new Date(),
           declaredBy: emergency.staff || 'Unknown',
+          requiresEvacuation: emergency.requires_evacuation || false,
         });
       } else {
         // No active emergency

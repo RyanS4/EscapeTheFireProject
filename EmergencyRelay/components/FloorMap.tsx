@@ -484,7 +484,7 @@ export default function FloorMap({
                                 isStairSelected && styles.stairwellLabelSelected,
                                 isEmergency && styles.roomLabelEmergency,
                             ]} numberOfLines={1} adjustsFontSizeToFit>
-                                {isEmergency ? '⚠️ ' + room.name : room.name}
+                                {room.name}
                             </Text>
                         </Pressable>
                     );

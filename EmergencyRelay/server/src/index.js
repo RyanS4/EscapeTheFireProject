@@ -183,7 +183,7 @@ async function sendEmergencyNotifications(alert) {
       const messages = chunk.map(token => ({
         to: token,
         sound: 'default',
-        title: '🚨 Emergency Alert Confirmed',
+        title: 'Emergency Alert Confirmed',
         body: `Location: ${alert.location || 'Unknown'} | Type: ${alert.type || 'Unknown'}`,
         data: { 
           alertType: alert.type,
@@ -275,7 +275,7 @@ async function sendAdminNotifications(alert) {
     const messages = validTokens.map(token => ({
       to: token,
       sound: 'default',
-      title: '⚠️ New Emergency Alert',
+      title: 'New Emergency Alert',
       body: `Location: ${alert.location || 'Unknown'} | Type: ${alert.type || 'Unknown'} - Please review and confirm`,
       data: { 
         alertType: alert.type,
@@ -1083,6 +1083,7 @@ app.post('/alerts/:id/confirm', async (req, res) => {
     return res.status(403).json({ error: 'forbidden' });
   }
   const { id } = req.params || {};
+  const { requiresEvacuation = false } = req.body || {};
   try {
     const alert = await alerts.findOne({ id });
     if (!alert) return res.status(404).json({ error: 'not_found' });
@@ -1100,6 +1101,7 @@ app.post('/alerts/:id/confirm', async (req, res) => {
       staff: alert.staff,
       type: alert.type,
       status: 'active',
+      requires_evacuation: !!requiresEvacuation,
       confirmed_by: caller.email,
       confirmed_at: new Date().toISOString(),
       created_at: alert.created_at
@@ -1112,7 +1114,7 @@ app.post('/alerts/:id/confirm', async (req, res) => {
     // Remove the alert (it's now an emergency)
     await alerts.remove({ id }, { multi: false });
     
-    console.log(`[Emergency] Emergency ${emergency.id} activated by ${caller.email}`);
+    console.log(`[Emergency] Emergency ${emergency.id} activated by ${caller.email} (evacuation: ${emergency.requires_evacuation})`);
     res.json({ success: true, emergency });
   } catch (e) {
     console.error('Confirm alert failed', e && e.message);
@@ -1156,6 +1158,7 @@ app.get('/emergency/active', async (req, res) => {
         location: activeEmergency.location,
         type: activeEmergency.type,
         staff: activeEmergency.staff,
+        requires_evacuation: activeEmergency.requires_evacuation || false,
         confirmed_by: activeEmergency.confirmed_by,
         confirmed_at: activeEmergency.confirmed_at,
         created_at: activeEmergency.created_at

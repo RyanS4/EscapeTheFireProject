@@ -784,13 +784,23 @@ export async function createAlertServer(alertData, baseUrl) {
 
 /**
  * Confirm/resolve an alert (admin only)
+ * @param {string} alertId - The alert ID to confirm
+ * @param {object} options - Options for the emergency
+ * @param {boolean} options.requiresEvacuation - Whether building evacuation is required
+ * @param {string} baseUrl - Optional base URL override
  */
-export async function confirmAlertServer(alertId, baseUrl) {
+export async function confirmAlertServer(alertId, options = {}, baseUrl = undefined) {
   if (!accessToken) throw new Error('no_token');
   const base = getBase(baseUrl);
   const res = await fetch(`${base}/alerts/${alertId}/confirm`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${accessToken}` },
+    headers: { 
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}` 
+    },
+    body: JSON.stringify({
+      requiresEvacuation: options.requiresEvacuation || false
+    }),
   });
   if (!res.ok) {
     const txt = await res.text();
