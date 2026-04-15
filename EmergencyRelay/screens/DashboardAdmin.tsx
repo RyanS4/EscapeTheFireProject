@@ -106,7 +106,7 @@ const DashboardAdmin = () => {
                         <Button 
                             title="Go to Emergency Map"
                             onPress={() => (navigation as any).navigate('MapAdmin')}
-                            color="#fff"
+                            color="#1976d2"
                         />
                     </View>
                 </View>
