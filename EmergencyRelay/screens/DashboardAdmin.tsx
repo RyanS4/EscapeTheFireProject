@@ -1,12 +1,14 @@
-import {View, Text, TextInput, Button, StyleSheet, Alert, Platform} from 'react-native';
+import {View, Text, TextInput, Button, StyleSheet, Alert, Platform, ScrollView} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
+import { useEmergency } from '../contexts/EmergencyContext';
 import React, {useState} from 'react';
 
 const DashboardAdmin = () => {
     
     const navigation = useNavigation();
     const { signOut } = useAuth();
+    const { emergencyState } = useEmergency();
 
     function handleAlertInitiation() {
         // Handle alert initiation logic here
@@ -77,8 +79,41 @@ const DashboardAdmin = () => {
     }
 
     return (
-        <View style={styles.container}>
-            <View style={styles.containerBox}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContainer}>
+            {/* Active Emergency Banner */}
+            {emergencyState.isActive && (
+                <View style={styles.emergencyBanner}>
+                    <Text style={styles.emergencyBannerTitle}>ACTIVE EMERGENCY</Text>
+                    <Text style={styles.emergencyBannerText}>
+                        Type: {emergencyState.type}
+                    </Text>
+                    <Text style={styles.emergencyBannerText}>
+                        Location: {emergencyState.location?.room} (Floor {emergencyState.location?.floor})
+                    </Text>
+                    {emergencyState.requiresEvacuation ? (
+                        <Text style={styles.emergencyBannerEvacuation}>
+                            EVACUATION REQUIRED
+                        </Text>
+                    ) : (
+                        <Text style={styles.emergencyBannerSubtext}>
+                            Shelter in place. No evacuation required.
+                        </Text>
+                    )}
+                    <Text style={styles.emergencyBannerSubtext}>
+                        Started: {emergencyState.startedAt?.toLocaleTimeString()} | By: {emergencyState.declaredBy}
+                    </Text>
+                    <View style={{ marginTop: 10 }}>
+                        <Button 
+                            title="Go to Emergency Map"
+                            onPress={() => (navigation as any).navigate('MapAdmin')}
+                            color="#1976d2"
+                        />
+                    </View>
+                </View>
+            )}
+
+            <View style={styles.container}>
+                <View style={styles.containerBox}>
                 <Text style={styles.title}>Emergency Management</Text>
                 <Text style={styles.caption}>From here you can initiate alerts and view & manage all class rosters</Text>
                 <View style={{ height: 16 }} />
@@ -107,16 +142,25 @@ const DashboardAdmin = () => {
             <View style={{width: '100%', maxWidth: 400}}>
                 <Button title="Logout" onPress={handleLogout} />
             </View>
-        </View>
+            </View>
+        </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
+    scrollView: {
+        flex: 1,
+        backgroundColor: '#ffffffff',
+    },
+    scrollContainer: {
+        flexGrow: 1,
+    },
     container: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#ffffffff',
+        padding: 16,
     },
     containerBox: {
         width: '100%',
@@ -138,6 +182,35 @@ const styles = StyleSheet.create({
         color: '#666',
         marginBottom: 8,
         textAlign: 'center',
+    },
+    // Emergency banner styles
+    emergencyBanner: {
+        width: '100%',
+        backgroundColor: '#d32f2f',
+        padding: 16,
+        alignItems: 'center',
+    },
+    emergencyBannerTitle: {
+        color: '#fff',
+        fontSize: 22,
+        fontWeight: 'bold',
+        marginBottom: 8,
+    },
+    emergencyBannerText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    emergencyBannerEvacuation: {
+        color: '#ffeb3b',
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginTop: 8,
+    },
+    emergencyBannerSubtext: {
+        color: 'rgba(255,255,255,0.8)',
+        fontSize: 12,
+        marginTop: 4,
     },
 });
 

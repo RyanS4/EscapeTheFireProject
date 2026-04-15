@@ -13,8 +13,9 @@ import MapStaff from './screens/MapStaff';
 import Instructions from './screens/Instructions';
 const Stack = createStackNavigator();
 import { NavigationContainer } from '@react-navigation/native';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { EmergencyProvider } from './contexts/EmergencyContext';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
@@ -65,6 +66,17 @@ async function getPushToken() {
   }
 }
 
+async function setupNotificationChannel() {
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('emergency-alerts', {
+      name: 'Emergency Alerts',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      sound: 'default',
+    });
+  }
+}
+
 
 function RootNavigator() {
   const { user, isAdmin } = useAuth();
@@ -73,7 +85,7 @@ function RootNavigator() {
     return (
       <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Login" component={Login} />
-        <Stack.Screen name="Instructions" component={Instructions} />
+        <Stack.Screen name="Instructions" component={Instructions} options={{ headerShown: true }} />
       </Stack.Navigator>
     );
   }
@@ -110,6 +122,7 @@ export default function App() {
     async function setup() {
       await requestLocationPermission();
       await requestNotificationPermissions();
+      await setupNotificationChannel();
     }
     setup();
 
@@ -124,7 +137,9 @@ export default function App() {
   return (
     <NavigationContainer>
       <AuthProvider>
-        <RootNavigator />
+        <EmergencyProvider>
+          <RootNavigator />
+        </EmergencyProvider>
       </AuthProvider>
     </NavigationContainer>
   );

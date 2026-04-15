@@ -1,6 +1,7 @@
 import {View, Text, Button, StyleSheet, TextInput, ScrollView, Alert, Dimensions} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
+import { useEmergency } from '../contexts/EmergencyContext';
 import React, {useState, useEffect} from 'react';
 import { getUserLocationsServer, getActiveAlertsServer, createAlertServer, cancelAlertServer } from '../services/api';
 import { ReportBox } from '../models/Report';
@@ -17,6 +18,7 @@ interface AlertData {
 export default function MapStaff() {
     const navigation = useNavigation();
     const { user } = useAuth();
+    const { emergencyState } = useEmergency();
     const [userLocations, setUserLocations] = useState([]);
     const [loading, setLoading] = useState(false);
     const [locationError, setLocationError] = useState(null);
@@ -164,12 +166,44 @@ export default function MapStaff() {
             showsVerticalScrollIndicator={true}
         >
             <View style={styles.container}>
+                {/* Active Emergency Banner */}
+                {emergencyState.isActive && (
+                    <View style={styles.emergencyBanner}>
+                        <Text style={styles.emergencyBannerTitle}>ACTIVE EMERGENCY</Text>
+                        <Text style={styles.emergencyBannerText}>
+                            Type: {emergencyState.type} | Location: {emergencyState.location?.room}
+                        </Text>
+                        {emergencyState.requiresEvacuation ? (
+                            <>
+                                <Text style={styles.emergencyBannerEvacuation}>
+                                    EVACUATION REQUIRED
+                                </Text>
+                                <Text style={styles.emergencyBannerSubtext}>
+                                    Follow evacuation procedures. Map interactions disabled.
+                                </Text>
+                                {/* Placeholder for escape route info */}
+                                <View style={styles.escapeRouteInfo}>
+                                    <Text style={styles.escapeRouteText}>
+                                        Escape route will be displayed once location is detected
+                                    </Text>
+                                </View>
+                            </>
+                        ) : (
+                            <Text style={styles.emergencyBannerSubtext}>
+                                Shelter in place. No evacuation required.
+                            </Text>
+                        )}
+                    </View>
+                )}
+
                 {/* Floor Map at the top */}
                 <View style={styles.floorMapContainer}>
                     <FloorMap 
                         onRoomPress={handleRoomPress}
                         highlightedRooms={highlightedRooms}
                         selectedStairwellGroup={selectedStairwellGroup}
+                        emergencyMode={emergencyState.isActive}
+                        emergencyLocation={emergencyState.location?.room || null}
                     />
                 </View>
 
@@ -259,10 +293,10 @@ export default function MapStaff() {
             ) : null}
 
             <View style={{ height: 16 }} />
-            {!showCreateForm && !selectedAlert && (
+            {!showCreateForm && !selectedAlert && !emergencyState.isActive && (
                 <Button title="Create Alert" onPress={handleOpenCreateForm} />
             )}
-            {!showCreateForm && !selectedAlert && (
+            {!showCreateForm && !selectedAlert && !emergencyState.isActive && (
                 <View style={{ height: 16 }} />
             )}
             <Button title="Back" onPress={handleBack} />
@@ -366,5 +400,48 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         gap: 8,
         marginTop: 8,
-    }
+    },
+    // Emergency banner styles
+    emergencyBanner: {
+        width: '100%',
+        backgroundColor: '#d32f2f',
+        padding: 16,
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    emergencyBannerTitle: {
+        color: '#fff',
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 4,
+    },
+    emergencyBannerText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    emergencyBannerEvacuation: {
+        color: '#ffeb3b',
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginTop: 8,
+        marginBottom: 4,
+    },
+    emergencyBannerSubtext: {
+        color: 'rgba(255,255,255,0.8)',
+        fontSize: 12,
+        marginTop: 4,
+    },
+    escapeRouteInfo: {
+        marginTop: 12,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+    },
+    escapeRouteText: {
+        color: '#fff',
+        fontSize: 12,
+        textAlign: 'center',
+    },
 });

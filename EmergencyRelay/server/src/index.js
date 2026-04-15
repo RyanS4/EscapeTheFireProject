@@ -80,6 +80,10 @@ const alerts = nedb.create({ filename: alertsFile, autoload: true });
 const pushTokensFile = path.join(DB_DIR, 'push_tokens.db');
 const pushTokens = nedb.create({ filename: pushTokensFile, autoload: true });
 
+// Create a NeDB for active emergencies (confirmed alerts become emergencies)
+const emergenciesFile = path.join(DB_DIR, 'emergencies.db');
+const emergencies = nedb.create({ filename: emergenciesFile, autoload: true });
+
 async function migrateRostersFromJson() {
   const jsonFile = path.join(__dirname, '../data/rosters.json');
   try {
@@ -179,7 +183,7 @@ async function sendEmergencyNotifications(alert) {
       const messages = chunk.map(token => ({
         to: token,
         sound: 'default',
-        title: '🚨 Emergency Alert Confirmed',
+        title: 'Emergency Alert Confirmed',
         body: `Location: ${alert.location || 'Unknown'} | Type: ${alert.type || 'Unknown'}`,
         data: { 
           alertType: alert.type,
@@ -189,6 +193,8 @@ async function sendEmergencyNotifications(alert) {
         ttl: 24 * 60 * 60,
         priority: 'high',
         badge: 1,
+        channelId: 'emergency-alerts',
+        vibrate: [0, 250, 250, 250],
       }));
 
       try {
@@ -222,6 +228,83 @@ async function sendEmergencyNotifications(alert) {
     if (e.stack) {
       console.error(`[NOTIFICATION] Stack trace: ${e.stack}`);
     }
+  }
+}
+
+/**
+ * Send alert notifications to admin users only (when a new alert is created)
+ */
+async function sendAdminNotifications(alert) {
+  try {
+    if (!expo) {
+      console.error('[NOTIFICATION] Expo SDK not initialized, cannot send admin notifications');
+      return;
+    }
+
+    console.log(`[NOTIFICATION] Sending admin notifications for new alert ${alert.id}`);
+    
+    // Get all users and filter for admins
+    const allUsers = await db.find({});
+    const admins = allUsers.filter(u => u.roles && Array.isArray(u.roles) && u.roles.includes('admin'));
+    
+    if (admins.length === 0) {
+      console.log('[NOTIFICATION] No admin users found');
+      return;
+    }
+    
+    console.log(`[NOTIFICATION] Found ${admins.length} admin users`);
+    
+    // Get push tokens for admin users
+    const adminIds = admins.map(a => a.id);
+    const allTokens = await pushTokens.find({});
+    const adminTokens = allTokens.filter(t => adminIds.includes(t.userId) || (t.roles && t.roles.includes('admin')));
+    
+    if (adminTokens.length === 0) {
+      console.log('[NOTIFICATION] No admin push tokens found');
+      return;
+    }
+
+    const validTokens = adminTokens
+      .map(t => t.token)
+      .filter(token => token && Expo.isExpoPushToken(token));
+
+    console.log(`[NOTIFICATION] Found ${validTokens.length} valid admin push tokens`);
+
+    if (validTokens.length === 0) return;
+
+    const messages = validTokens.map(token => ({
+      to: token,
+      sound: 'default',
+      title: 'New Emergency Alert',
+      body: `Location: ${alert.location || 'Unknown'} | Type: ${alert.type || 'Unknown'} - Please review and confirm`,
+      data: { 
+        alertType: alert.type,
+        alertLocation: alert.location,
+        alertId: alert.id,
+        createdAt: alert.created_at
+      },
+      ttl: 24 * 60 * 60,
+      priority: 'high',
+      badge: 1,
+      channelId: 'emergency-alerts',
+      vibrate: [0, 250, 250, 250],
+    }));
+
+    try {
+      const tickets = await expo.sendPushNotificationsAsync(messages);
+      console.log(`[NOTIFICATION] Sent ${tickets.length} admin notifications for alert ${alert.id}`);
+      tickets.forEach((ticket, idx) => {
+        if (ticket.status === 'ok') {
+          console.log(`[NOTIFICATION] ✓ Admin message ${idx + 1} sent: ID ${ticket.id}`);
+        } else {
+          console.error(`[NOTIFICATION] ✗ Admin message ${idx + 1} error: ${ticket.message}`);
+        }
+      });
+    } catch (e) {
+      console.error(`[NOTIFICATION] Error sending admin notifications: ${e && e.message}`);
+    }
+  } catch (e) {
+    console.error(`[NOTIFICATION] Failed to send admin notifications: ${e && e.message}`);
   }
 }
 
@@ -367,6 +450,15 @@ app.delete('/admin/users/:id', async (req, res) => {
   const caller = await userFromToken(req);
   if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('admin')) {
     return res.status(403).json({ error: 'forbidden' });
+  }
+  // Prevent deleting the last admin account
+  const targetUser = await db.findOne({ id });
+  if (targetUser && Array.isArray(targetUser.roles) && targetUser.roles.includes('admin')) {
+    const allUsers = await db.find({});
+    const adminCount = allUsers.filter(u => Array.isArray(u.roles) && u.roles.includes('admin')).length;
+    if (adminCount <= 1) {
+      return res.status(400).json({ error: 'cannot_delete_last_admin', message: 'Cannot delete the last admin account' });
+    }
   }
   const info = await db.remove({ id }, { multi: false });
   if (!info || info === 0) return res.status(404).json({ error: 'not_found' });
@@ -806,6 +898,7 @@ app.post('/rosters/:id/assign', async (req, res) => {
 });
 
 // Update roster properties (staffAccounted, etc.)
+// When staffAccounted changes, update ALL rosters with the same assigned staff member
 app.patch('/rosters/:id', async (req, res) => {
   const caller = await userFromToken(req);
   if (!caller) return res.status(401).json({ error: 'no_auth' });
@@ -825,7 +918,19 @@ app.patch('/rosters/:id', async (req, res) => {
     
     if (Object.keys(patch).length === 0) return res.status(400).json({ error: 'no_changes' });
     
-    await rosters.update({ id }, { $set: patch }, { multi: false });
+    // If staffAccounted is being updated and roster has assigned staff,
+    // update ALL rosters with the same assigned staff member
+    if (typeof staffAccounted === 'boolean' && roster.assignedTo) {
+      await rosters.update(
+        { assignedTo: roster.assignedTo },
+        { $set: { staffAccounted } },
+        { multi: true }
+      );
+      console.log(`[ROSTER] Updated staffAccounted=${staffAccounted} for all rosters with staff ${roster.assignedTo}`);
+    } else {
+      await rosters.update({ id }, { $set: patch }, { multi: false });
+    }
+    
     const updated = await rosters.findOne({ id });
     res.json(updated);
   } catch (e) {
@@ -868,16 +973,21 @@ app.post('/user/register-push-token', async (req, res) => {
     // Check if this user already has a token registered
     const existing = await pushTokens.findOne({ userId: caller.id });
     if (existing) {
-      // Update existing token
+      // Update existing token and roles
       console.log(`[PUSH_TOKEN] Updating existing token for user ${caller.email}`);
-      await pushTokens.update({ userId: caller.id }, { $set: { token: pushToken, updated_at: new Date().toISOString() } });
+      await pushTokens.update({ userId: caller.id }, { $set: { 
+        token: pushToken, 
+        roles: caller.roles || [],
+        updated_at: new Date().toISOString() 
+      }});
     } else {
-      // Insert new token
+      // Insert new token with roles
       console.log(`[PUSH_TOKEN] Inserting new token for user ${caller.email}`);
       await pushTokens.insert({
         userId: caller.id,
         email: caller.email,
         token: pushToken,
+        roles: caller.roles || [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
@@ -955,6 +1065,10 @@ app.post('/alerts', async (req, res) => {
       created_at: new Date().toISOString()
     };
     await alerts.insert(alert);
+    
+    // Notify admins about the new alert
+    await sendAdminNotifications(alert);
+    
     res.status(201).json(alert);
   } catch (e) {
     console.error('Create alert failed', e && e.message);
@@ -962,23 +1076,46 @@ app.post('/alerts', async (req, res) => {
   }
 });
 
-// Confirm/resolve an alert (admin only)
+// Confirm/resolve an alert (admin only) - Creates an active emergency
 app.post('/alerts/:id/confirm', async (req, res) => {
   const caller = await userFromToken(req);
   if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('admin')) {
     return res.status(403).json({ error: 'forbidden' });
   }
   const { id } = req.params || {};
+  const { requiresEvacuation = false } = req.body || {};
   try {
     const alert = await alerts.findOne({ id });
     if (!alert) return res.status(404).json({ error: 'not_found' });
     
-    // Send emergency notifications to all users before removing the alert
+    // Check if there's already an active emergency
+    const existingEmergency = await emergencies.findOne({ status: 'active' });
+    if (existingEmergency) {
+      return res.status(409).json({ error: 'emergency_already_active', message: 'An emergency is already in progress' });
+    }
+    
+    // Create an active emergency from this alert
+    const emergency = {
+      id: alert.id,
+      location: alert.location,
+      staff: alert.staff,
+      type: alert.type,
+      status: 'active',
+      requires_evacuation: !!requiresEvacuation,
+      confirmed_by: caller.email,
+      confirmed_at: new Date().toISOString(),
+      created_at: alert.created_at
+    };
+    await emergencies.insert(emergency);
+    
+    // Send emergency notifications to all users
     await sendEmergencyNotifications(alert);
     
-    // Remove the alert
+    // Remove the alert (it's now an emergency)
     await alerts.remove({ id }, { multi: false });
-    res.json({ success: true });
+    
+    console.log(`[Emergency] Emergency ${emergency.id} activated by ${caller.email} (evacuation: ${emergency.requires_evacuation})`);
+    res.json({ success: true, emergency });
   } catch (e) {
     console.error('Confirm alert failed', e && e.message);
     res.status(500).json({ error: 'confirm_failed' });
@@ -998,6 +1135,91 @@ app.post('/alerts/:id/cancel', async (req, res) => {
   } catch (e) {
     console.error('Cancel alert failed', e && e.message);
     res.status(500).json({ error: 'cancel_failed' });
+  }
+});
+
+// ============================================
+// EMERGENCY STATE ENDPOINTS
+// ============================================
+
+// Get the currently active emergency (if any)
+app.get('/emergency/active', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller) return res.status(401).json({ error: 'no_auth' });
+  try {
+    const activeEmergency = await emergencies.findOne({ status: 'active' });
+    if (!activeEmergency) {
+      return res.json({ active: false, emergency: null });
+    }
+    res.json({
+      active: true,
+      emergency: {
+        id: activeEmergency.id,
+        location: activeEmergency.location,
+        type: activeEmergency.type,
+        staff: activeEmergency.staff,
+        requires_evacuation: activeEmergency.requires_evacuation || false,
+        confirmed_by: activeEmergency.confirmed_by,
+        confirmed_at: activeEmergency.confirmed_at,
+        created_at: activeEmergency.created_at
+      }
+    });
+  } catch (e) {
+    console.error('Get active emergency failed', e && e.message);
+    res.status(500).json({ error: 'get_failed' });
+  }
+});
+
+// End emergency / All Clear (admin only)
+app.post('/emergency/:id/end', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('admin')) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  const { id } = req.params || {};
+  try {
+    const emergency = await emergencies.findOne({ id, status: 'active' });
+    if (!emergency) {
+      return res.status(404).json({ error: 'not_found', message: 'No active emergency found with that ID' });
+    }
+    
+    // Update emergency status to ended
+    await emergencies.update(
+      { id },
+      { $set: { 
+        status: 'ended', 
+        ended_by: caller.email, 
+        ended_at: new Date().toISOString() 
+      }}
+    );
+    
+    console.log(`[Emergency] Emergency ${id} ended by ${caller.email}`);
+    
+    // TODO: Send "All Clear" notifications to all users
+    // This could be implemented similar to sendEmergencyNotifications
+    
+    res.json({ success: true, message: 'Emergency ended - All Clear' });
+  } catch (e) {
+    console.error('End emergency failed', e && e.message);
+    res.status(500).json({ error: 'end_failed' });
+  }
+});
+
+// Get emergency history (admin only)
+app.get('/emergency/history', async (req, res) => {
+  const caller = await userFromToken(req);
+  if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('admin')) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  try {
+    const allEmergencies = await emergencies.find({});
+    const sorted = allEmergencies.sort((a, b) => 
+      new Date(b.confirmed_at || b.created_at).getTime() - new Date(a.confirmed_at || a.created_at).getTime()
+    );
+    res.json(sorted);
+  } catch (e) {
+    console.error('Get emergency history failed', e && e.message);
+    res.status(500).json({ error: 'get_failed' });
   }
 });
 

@@ -784,13 +784,23 @@ export async function createAlertServer(alertData, baseUrl) {
 
 /**
  * Confirm/resolve an alert (admin only)
+ * @param {string} alertId - The alert ID to confirm
+ * @param {object} options - Options for the emergency
+ * @param {boolean} options.requiresEvacuation - Whether building evacuation is required
+ * @param {string} baseUrl - Optional base URL override
  */
-export async function confirmAlertServer(alertId, baseUrl) {
+export async function confirmAlertServer(alertId, options = {}, baseUrl = undefined) {
   if (!accessToken) throw new Error('no_token');
   const base = getBase(baseUrl);
   const res = await fetch(`${base}/alerts/${alertId}/confirm`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${accessToken}` },
+    headers: { 
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}` 
+    },
+    body: JSON.stringify({
+      requiresEvacuation: options.requiresEvacuation || false
+    }),
   });
   if (!res.ok) {
     const txt = await res.text();
@@ -814,6 +824,70 @@ export async function cancelAlertServer(alertId, baseUrl) {
   if (!res.ok) {
     const txt = await res.text();
     const err = new Error(`Cancel alert failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+// ============================================
+// EMERGENCY STATE API FUNCTIONS
+// ============================================
+
+/**
+ * Get the currently active emergency (if any)
+ * Returns { active: boolean, emergency: EmergencyData | null }
+ */
+export async function getActiveEmergency(baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/emergency/active`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`Get active emergency failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  const data = await res.json();
+  // Return the emergency object directly if active, or null
+  return data.active ? data.emergency : null;
+}
+
+/**
+ * End an active emergency (All Clear) - Admin only
+ */
+export async function endEmergencyServer(emergencyId, baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/emergency/${emergencyId}/end`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`End emergency failed: ${res.status} ${txt}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+/**
+ * Get emergency history (Admin only)
+ */
+export async function getEmergencyHistory(baseUrl) {
+  if (!accessToken) throw new Error('no_token');
+  const base = getBase(baseUrl);
+  const res = await fetch(`${base}/emergency/history`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(`Get emergency history failed: ${res.status} ${txt}`);
     err.status = res.status;
     throw err;
   }

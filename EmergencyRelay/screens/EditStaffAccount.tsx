@@ -136,6 +136,14 @@ export default function EditStaffAccount() {
             Alert.alert('Error', 'You cannot delete your own account while signed in');
             return;
         }
+        // Check if this is the last admin account
+        if (Array.isArray(item.roles) && item.roles.includes('admin')) {
+            const adminCount = users.filter((u: any) => Array.isArray(u.roles) && u.roles.includes('admin')).length;
+            if (adminCount <= 1) {
+                Alert.alert('Error', 'Cannot delete the last admin account. Create another admin account first.');
+                return;
+            }
+        }
         setDeleteTarget(item);
     }
 
