@@ -59,60 +59,59 @@ const roomsByFloor: { [key: number]: RoomArea[] } = {
         // FLOOR 1 - firstFloorView.png (659x379 pixels)
         // =====================================================
         // Far left wing rooms
-        { id: 'room-2', name: 'Room 2', type: 'room', x: 2.5, y: 38.5, width: 7, height: 18 },
-        { id: 'room-4', name: 'Room 4', type: 'room', x: 32.4, y: 38.5, width: 5, height: 11 },
-        { id: 'room-7', name: 'Room 7', type: 'room', x: 1, y: 55, width: 5, height: 12 },
+        { id: 'room-2', name: 'Room 101', type: 'room', x: 2.5, y: 38.5, width: 7, height: 18 },
+        { id: 'room-4', name: 'Room 105', type: 'room', x: 21.5, y: 38.5, width: 6, height: 12.5 },
+        { id: 'room-7', name: 'Room 102', type: 'room', x: 5, y: 56, width: 6, height: 11.5 },
         
         // Main Hall (vertical)
-        { id: 'hall-main', name: 'Main Hall', type: 'hall', x: 7, y: 30, width: 4, height: 42 },
+        { id: 'hall-main', name: 'Main Hall', type: 'hall', x: 9.5, y: 51, width: 35.5, height: 5 },
         
         // Left-center rooms (vertical stack)
-        { id: 'room-11', name: 'Room 11', type: 'room', x: 14, y: 22, width: 6, height: 10 },
-        { id: 'room-12', name: 'Room 12', type: 'room', x: 14, y: 32, width: 6, height: 10 },
-        { id: 'room-13', name: 'Room 13', type: 'room', x: 14, y: 42, width: 6, height: 10 },
-        { id: 'room-14', name: 'Room 14', type: 'room', x: 14, y: 52, width: 6, height: 10 },
-        { id: 'room-15', name: 'Room 15', type: 'room', x: 14, y: 62, width: 7, height: 10 },
+        { id: 'room-11', name: 'Room 103', type: 'room', x: 9.5, y: 38.5, width: 10.5, height: 11 },
+        { id: 'room-12', name: 'Room 106', type: 'room', x: 17.5, y: 56.5, width: 6.5, height: 11 },
+        { id: 'room-13', name: 'Room 104', type: 'room', x: 11, y: 56.5, width: 6.5, height: 11 },
+        { id: 'room-14', name: 'Room 108', type: 'room', x: 24, y: 56.5, width: 6, height: 11 },
+        { id: 'room-15', name: 'Room 107', type: 'room', x: 27.5, y: 38.5, width: 5, height: 12.5 },
         
         // Upper center rooms
-        { id: 'room-8', name: 'Room 8', type: 'room', x: 24, y: 5, width: 6, height: 12 },
-        { id: 'room-9', name: 'Room 9', type: 'room', x: 24, y: 17, width: 6, height: 10 },
-        { id: 'room-10', name: 'Room 10', type: 'room', x: 33, y: 5, width: 10, height: 18 },
+        { id: 'room-8', name: 'Room 109', type: 'room', x: 32.5, y: 38.5, width: 10.5, height: 12.5 },
+        { id: 'room-9', name: 'Room 112', type: 'room', x: 47, y: 6.5, width: 11, height: 15 },
+        { id: 'room-10', name: 'Room 111', type: 'room', x: 33.5, y: 9.5, width: 13.5, height: 15 },
         
         // Center Hall (horizontal)
-        { id: 'hall-center', name: 'Center Hall', type: 'hall', x: 28, y: 25, width: 25, height: 4 },
+        { id: 'hall-center', name: 'Center Hall', type: 'hall', x: 39.5, y: 24, width: 13.5, height: 7 },
         
         // Upper right area
-        { id: 'room-16', name: 'Room 16', type: 'room', x: 56, y: 5, width: 6, height: 10 },
-        { id: 'room-17', name: 'Room 17', type: 'room', x: 56, y: 15, width: 6, height: 10 },
+        { id: 'room-16', name: 'Room 113', type: 'room', x: 55, y: 46, width: 6, height: 12 },
+        { id: 'room-17', name: 'Room 114', type: 'room', x: 59, y: 53, width: 6, height: 12 },
         
         // Stairwell A (red - upper right)
-        { id: 'stair-A-1', name: 'Stairwell A', type: 'stairwell', stairwellGroup: 'A', x: 52, y: 10, width: 4, height: 8 },
+        { id: 'stair-A-1', name: 'Stairwell A', type: 'stairwell', stairwellGroup: 'A', x: 45, y: 56.5, width: 6, height: 10 },
         
         // Middle section rooms
-        { id: 'room-18', name: 'Room 18', type: 'room', x: 50, y: 28, width: 5, height: 8 },
-        { id: 'room-19', name: 'Room 19', type: 'room', x: 50, y: 36, width: 5, height: 8 },
-        { id: 'room-20', name: 'Room 20', type: 'room', x: 57, y: 25, width: 5, height: 8 },
-        { id: 'room-21', name: 'Room 21', type: 'room', x: 57, y: 33, width: 5, height: 8 },
+        { id: 'room-18', name: 'Room 115', type: 'room', x: 63.7, y: 58.5, width: 6, height: 12 },
+        { id: 'room-19', name: 'Room 116', type: 'room', x: 68, y: 65, width: 5, height: 11 },
+        { id: 'room-20', name: 'Room 117', type: 'room', x: 71.5, y: 74, width: 3.5, height: 5 },
+        { id: 'room-21', name: 'Room 118', type: 'room', x: 74.5, y: 78, width: 3.5, height: 5 },
         
         // Stairwell B (red - middle)
-        { id: 'stair-B-1', name: 'Stairwell B', type: 'stairwell', stairwellGroup: 'B', x: 45, y: 28, width: 5, height: 7 },
+        { id: 'stair-B-1', name: 'Stairwell B', type: 'stairwell', stairwellGroup: 'B', x: 46, y: 35, width: 5, height: 5 },
         
         // Stairwell C (red - lower middle)
-        { id: 'stair-C-1', name: 'Stairwell C', type: 'stairwell', stairwellGroup: 'C', x: 45, y: 45, width: 6, height: 10 },
+        { id: 'stair-C-1', name: 'Stairwell C', type: 'stairwell', stairwellGroup: 'C', x: 55, y: 27, width: 6, height: 6 },
         
         // Lower right wing
-        { id: 'room-22', name: 'Room 22', type: 'room', x: 60, y: 45, width: 6, height: 10 },
-        { id: 'room-24', name: 'Room 24', type: 'room', x: 60, y: 55, width: 6, height: 10 },
+        { id: 'room-22', name: 'Room 110', type: 'room', x: 46, y: 41, width: 6, height: 10 },
+        { id: 'room-24', name: 'Room 119', type: 'room', x: 64, y: 26, width: 25, height: 30 },
         
         // Right Hall (vertical)
-        { id: 'hall-right', name: 'Right Hall', type: 'hall', x: 66, y: 42, width: 3, height: 25 },
+        { id: 'hall-right', name: 'Right Hall', type: 'hall', x: 56, y: 53.5, width: 25, height: 4 },
         
         // Far right rooms
-        { id: 'room-23', name: 'Room 23', type: 'room', x: 73, y: 42, width: 8, height: 10 },
-        { id: 'room-25', name: 'Room 25', type: 'room', x: 73, y: 52, width: 8, height: 10 },
+        
         
         // Far right room
-        { id: 'room-27', name: 'Room 27', type: 'room', x: 90, y: 35, width: 8, height: 25 },
+        //{ id: 'room-27', name: 'Room 27', type: 'room', x: 90, y: 35, width: 8, height: 25 },
     ],
     2: [
         // =====================================================
@@ -470,6 +469,18 @@ export default function FloorMap({
                                 emergencyMode && styles.roomDisabled,
                                 getRoomStyle(room),
                                 pressed && !emergencyMode && styles.roomPressed,
+                                room.id === 'room-10' && { transform: [{ rotate: '348deg' }] },
+                                room.id === 'room-9' && { transform: [{ rotate: '348deg' }] },
+                                room.id === 'hall-center' && { transform: [{ rotate: '348deg' }] },
+                                room.id === 'room-16' && { transform: [{ rotate: '40deg' }] },
+                                room.id === 'room-17' && { transform: [{ rotate: '40deg' }] },
+                                room.id === 'room-18' && { transform: [{ rotate: '40deg' }] },
+                                room.id === 'room-19' && { transform: [{ rotate: '40deg' }] },
+                                room.id === 'room-20' && { transform: [{ rotate: '40deg' }] },
+                                room.id === 'room-21' && { transform: [{ rotate: '40deg' }] },
+                                room.id === 'stair-C-1' && { transform: [{ rotate: '356deg' }] },
+                                room.id === 'room-24' && { transform: [{ rotate: '40deg' }] },
+                                room.id === 'hall-right' && { transform: [{ rotate: '40deg' }] },
                                 Platform.OS === 'web' && !emergencyMode && { cursor: 'pointer' } as any,
                                 Platform.OS === 'web' && emergencyMode && { cursor: 'not-allowed' } as any,
                             ]}
