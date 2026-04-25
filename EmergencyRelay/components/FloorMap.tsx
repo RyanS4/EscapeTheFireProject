@@ -64,7 +64,8 @@ const roomsByFloor: { [key: number]: RoomArea[] } = {
         { id: 'room-7', name: 'Room 102', type: 'room', x: 5, y: 56, width: 6, height: 11.5 },
         
         // Main Hall (vertical)
-        { id: 'hall-main', name: 'Main Hall', type: 'hall', x: 9.5, y: 51, width: 35.5, height: 5 },        
+        { id: 'hall-main', name: 'Main Hall', type: 'hall', x: 9.5, y: 51, width: 35.5, height: 5 },
+        
         // Left-center rooms (vertical stack)
         { id: 'room-11', name: 'Room 103', type: 'room', x: 9.5, y: 38.5, width: 10.5, height: 11 },
         { id: 'room-12', name: 'Room 106', type: 'room', x: 17.5, y: 56.5, width: 6.5, height: 11 },
@@ -78,13 +79,15 @@ const roomsByFloor: { [key: number]: RoomArea[] } = {
         { id: 'room-10', name: 'Room 111', type: 'room', x: 33.5, y: 9.5, width: 13.5, height: 15 },
         
         // Center Hall (horizontal)
-{ id: 'hall-center', name: 'Center Hall', type: 'hall', x: 39.5, y: 24, width: 13.5, height: 7 },        
+        { id: 'hall-center', name: 'Center Hall', type: 'hall', x: 39.5, y: 24, width: 13.5, height: 7 },
+        
         // Upper right area
         { id: 'room-16', name: 'Room 113', type: 'room', x: 55, y: 46, width: 6, height: 12 },
         { id: 'room-17', name: 'Room 114', type: 'room', x: 59, y: 53, width: 6, height: 12 },
         
         // Stairwell A (red - upper right)
-        { id: 'stair-A-1', name: 'Stairwell A', type: 'stairwell', stairwellGroup: 'A', x: 45, y: 56.5, width: 6, height: 10 },        
+        { id: 'stair-A-1', name: 'Stairwell A', type: 'stairwell', stairwellGroup: 'A', x: 45, y: 56.5, width: 6, height: 10 },
+        
         // Middle section rooms
         { id: 'room-18', name: 'Room 115', type: 'room', x: 63.7, y: 58.5, width: 6, height: 12 },
         { id: 'room-19', name: 'Room 116', type: 'room', x: 68, y: 65, width: 5, height: 11 },
@@ -92,18 +95,23 @@ const roomsByFloor: { [key: number]: RoomArea[] } = {
         { id: 'room-21', name: 'Room 118', type: 'room', x: 74.5, y: 78, width: 3.5, height: 5 },
         
         // Stairwell B (red - middle)
-        { id: 'stair-B-1', name: 'Stairwell B', type: 'stairwell', stairwellGroup: 'B', x: 46, y: 35, width: 5, height: 5 },        
+        { id: 'stair-B-1', name: 'Stairwell B', type: 'stairwell', stairwellGroup: 'B', x: 46, y: 35, width: 5, height: 5 },
+        
         // Stairwell C (red - lower middle)
-        { id: 'stair-C-1', name: 'Stairwell C', type: 'stairwell', stairwellGroup: 'C', x: 55, y: 27, width: 6, height: 6 },        
+        { id: 'stair-C-1', name: 'Stairwell C', type: 'stairwell', stairwellGroup: 'C', x: 55, y: 27, width: 6, height: 6 },
+        
         // Lower right wing
         { id: 'room-22', name: 'Room 110', type: 'room', x: 46, y: 41, width: 6, height: 10 },
         { id: 'room-24', name: 'Room 119', type: 'room', x: 64, y: 26, width: 25, height: 30 },
         
         // Right Hall (vertical)
-        { id: 'hall-right', name: 'Right Hall', type: 'hall', x: 56, y: 53.5, width: 25, height: 4 },        
+        { id: 'hall-right', name: 'Right Hall', type: 'hall', x: 56, y: 53.5, width: 25, height: 4 },
+        
         // Far right rooms
         
+        
         // Far right room
+        //{ id: 'room-27', name: 'Room 27', type: 'room', x: 90, y: 35, width: 8, height: 25 },
     ],
     2: [
         // =====================================================
@@ -444,29 +452,74 @@ export default function FloorMap({
             </View>
 
             {/* Floor map image with clickable rooms */}
-            <ScrollView horizontal style={{ width: '100%' }} contentContainerStyle={{ flexGrow: 1 }}>
-                <View
-                    style={[
-                        styles.mapContainer,
-                        {
-                            height: Math.max(screenHeight * 0.5, 300),
-                            width: imageLayout.width > 0 ? imageLayout.width : '100%',
-                        },
-                    ]}
-                    onLayout={onContainerLayout}
-                >
-                    {hasFloorImage ? (
-                        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-                            <Image
-                                source={floorImages[currentFloor]}
-                                style={styles.mapImage}
-                                resizeMode="contain"
-                            />
-                        </View>
-                    ) : (
-                        <View style={styles.placeholderMap} pointerEvents="none">
-                            <Text style={styles.placeholderText}>
-                                {getFloorLabel(currentFloor)} image not available
+            <View style={[styles.mapContainer, { height: Math.max(screenHeight * 0.3, 200) }]} onLayout={onContainerLayout}>
+                {hasFloorImage ? (
+                    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+                        <Image
+                            source={floorImages[currentFloor]}
+                            style={styles.mapImage}
+                            resizeMode="contain"
+                        />
+                    </View>
+                ) : (
+                    <View style={styles.placeholderMap} pointerEvents="none">
+                        <Text style={styles.placeholderText}>
+                            {getFloorLabel(currentFloor)} image not available
+                        </Text>
+                        <Text style={styles.placeholderSubtext}>
+                            Add {currentFloor === 2 ? 'secondFloorView.png' : 'thirdFloorView.png'} to assets/
+                        </Text>
+                    </View>
+                )}
+
+                {/* 2D Grid Overlay */}
+                {renderGrid()}
+
+                {/* Clickable room overlays */}
+                {currentRooms.map(room => {
+                    const isHighlighted = highlightedRooms.includes(room.id);
+                    const isStairSelected = isStairwellSelected(room);
+                    const isEmergency = isEmergencyRoom(room);
+                    return (
+                        <Pressable
+                            key={room.id}
+                            style={({ pressed }) => [
+                                styles.roomOverlay,
+                                room.type === 'stairwell' && styles.stairwellOverlay,
+                                room.type === 'hall' && styles.hallOverlay,
+                                isHighlighted && styles.roomHighlighted,
+                                isStairSelected && styles.stairwellSelected,
+                                isEmergency && styles.roomEmergency,
+                                emergencyMode && styles.roomDisabled,
+                                getRoomStyle(room),
+                                pressed && !emergencyMode && styles.roomPressed,
+                                room.id === 'room-10' && { transform: [{ rotate: '348deg' }] },
+                                room.id === 'room-9' && { transform: [{ rotate: '348deg' }] },
+                                room.id === 'hall-center' && { transform: [{ rotate: '348deg' }] },
+                                room.id === 'room-16' && { transform: [{ rotate: '40deg' }] },
+                                room.id === 'room-17' && { transform: [{ rotate: '40deg' }] },
+                                room.id === 'room-18' && { transform: [{ rotate: '40deg' }] },
+                                room.id === 'room-19' && { transform: [{ rotate: '40deg' }] },
+                                room.id === 'room-20' && { transform: [{ rotate: '40deg' }] },
+                                room.id === 'room-21' && { transform: [{ rotate: '40deg' }] },
+                                room.id === 'stair-C-1' && { transform: [{ rotate: '356deg' }] },
+                                room.id === 'room-24' && { transform: [{ rotate: '40deg' }] },
+                                room.id === 'hall-right' && { transform: [{ rotate: '40deg' }] },
+                                Platform.OS === 'web' && !emergencyMode && { cursor: 'pointer' } as any,
+                                Platform.OS === 'web' && emergencyMode && { cursor: 'not-allowed' } as any,
+                            ]}
+                            onPress={() => handleRoomPress(room)}
+                            disabled={emergencyMode}
+                        >
+                            <Text style={[
+                                styles.roomLabel,
+                                room.type === 'stairwell' && styles.stairwellLabel,
+                                room.type === 'hall' && styles.hallLabel,
+                                isHighlighted && styles.roomLabelHighlighted,
+                                isStairSelected && styles.stairwellLabelSelected,
+                                isEmergency && styles.roomLabelEmergency,
+                            ]} numberOfLines={1} adjustsFontSizeToFit>
+                                {room.name}
                             </Text>
                             <Text style={styles.placeholderSubtext}>
                                 Add {currentFloor === 2 ? 'secondFloorView.png' : 'thirdFloorView.png'} to assets/
