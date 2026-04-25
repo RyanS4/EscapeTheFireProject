@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Image, TouchableOpacity, Pressable, Text, StyleSheet, Dimensions, LayoutChangeEvent, Platform } from 'react-native';
+import { View, Image, TouchableOpacity, Pressable, Text, StyleSheet, Dimensions, LayoutChangeEvent, Platform, ScrollView } from 'react-native';
 
 // Floor images - add secondFloorView.png and thirdFloorView.png when available
 const floorImages: { [key: number]: any } = {
     1: require('../assets/firstFloorView.png'),
     2: require('../assets/SquashFloorplan.png'),
-    // 3: require('../assets/thirdFloorView.png'),
+    3: require('../assets/AdminFloor.png'),
 };
 
 // Pre-defined image dimensions (update these if you change the images)
@@ -121,26 +121,31 @@ const roomsByFloor: { [key: number]: RoomArea[] } = {
         // =====================================================
         
         // Left section rooms
-        { id: 'room-201', name: 'Gymnasium', type: 'room', x: 2, y: 10, width: 20, height: 35 },
-        { id: 'room-202', name: 'Equipment Room', type: 'room', x: 2, y: 50, width: 10, height: 20 },
-        { id: 'room-203', name: 'Locker Room A', type: 'room', x: 2, y: 72, width: 12, height: 18 },
+        { id: 'room-201', name: '201', type: 'room', x: 6.8, y: 14.4, width: 12.2, height: 43 },
+        { id: 'room-202', name: '202', type: 'room', x: 10.3, y: 58, width: 8.5, height: 26.5 },
+        { id: 'room-203', name: '203', type: 'room', x: 19, y: 61, width: 4, height: 23.5 },
         
         // Center section
-        { id: 'hall-main-2', name: 'Main Corridor', type: 'hall', x: 24, y: 40, width: 30, height: 8 },
-        { id: 'room-204', name: 'Office', type: 'room', x: 25, y: 10, width: 12, height: 15 },
-        { id: 'room-205', name: 'Storage', type: 'room', x: 25, y: 55, width: 10, height: 15 },
-        { id: 'room-206', name: 'Locker Room B', type: 'room', x: 38, y: 55, width: 12, height: 18 },
+        { id: 'hall-main-2', name: 'Main Hall', type: 'hall', x: 23, y: 66, width: 57, height: 18 },
+        { id: 'hall-side-2', name: 'Side Hall', type: 'hall', x: 34, y: 15, width: 6, height: 46 },
+        { id: 'room-204', name: '204', type: 'room', x: 19.2, y: 14.8, width: 14.4, height: 25 },
+        { id: 'room-205', name: '205', type: 'room', x: 19, y: 40, width: 14.8, height: 20.5 },
+        { id: 'room-206', name: '206', type: 'room', x: 40.2, y: 39.2, width: 14.5, height: 21.2 },
         
         // Right section  
-        { id: 'room-207', name: 'Squash Court 1', type: 'room', x: 58, y: 5, width: 18, height: 28 },
-        { id: 'room-208', name: 'Squash Court 2', type: 'room', x: 58, y: 35, width: 18, height: 28 },
-        { id: 'room-209', name: 'Squash Court 3', type: 'room', x: 58, y: 65, width: 18, height: 28 },
-        { id: 'room-210', name: 'Viewing Area', type: 'room', x: 78, y: 20, width: 15, height: 25 },
-        { id: 'room-211', name: 'Pro Shop', type: 'room', x: 78, y: 50, width: 15, height: 20 },
-        
+        { id: 'room-207', name: '207', type: 'room', x: 40, y: 15, width: 14.5, height: 24 },
+        { id: 'room-208', name: '208', type: 'room', x: 55, y: 39, width: 13, height: 28 },
+        { id: 'room-209', name: '209', type: 'room', x: 54.6, y: 15, width: 8.5, height: 23 },
+        { id: 'room-210', name: '210', type: 'room', x: 63, y: 15, width: 24.2, height: 23 },
+        { id: 'room-211', name: '211', type: 'room', x: 68, y: 52, width: 4.5, height: 15 },
+        { id: 'room-212', name: '212', type: 'room', x: 68, y: 44, width: 4.5, height: 8.5 },
+        { id: 'room-213', name: '213', type: 'room', x: 68, y: 38.3, width: 4.5, height: 5.5 },
+        { id: 'room-214', name: '214', type: 'room', x: 72.6, y: 38.3, width: 18.7, height: 27.5 },
+        { id: 'room-215', name: '215', type: 'room', x: 87.3, y: 15, width: 4, height: 23 },
+
+
         // Stairwells (same location relative to building structure)
-        { id: 'stair-A-2', name: 'Stairwell A', type: 'stairwell', stairwellGroup: 'A', x: 15, y: 35, width: 5, height: 10 },
-        { id: 'stair-B-2', name: 'Stairwell B', type: 'stairwell', stairwellGroup: 'B', x: 52, y: 42, width: 5, height: 10 },
+        { id: 'stair-A-2', name: 'Stairwell A', type: 'stairwell', stairwellGroup: 'A', x: 80.5, y: 67, width: 10.5, height: 17 },
     ],
     3: [
         // =====================================================
@@ -150,27 +155,46 @@ const roomsByFloor: { [key: number]: RoomArea[] } = {
         // =====================================================
         
         // Example: Administrative floor with different layout
-        { id: 'room-301', name: 'Conference Room A', type: 'room', x: 5, y: 10, width: 15, height: 20 },
-        { id: 'room-302', name: 'Conference Room B', type: 'room', x: 5, y: 35, width: 15, height: 20 },
-        { id: 'room-303', name: 'Director Office', type: 'room', x: 5, y: 60, width: 12, height: 18 },
+        { id: 'room-301', name: '301', type: 'room', x: 7, y: 31, width: 8.3, height: 26 },
+        { id: 'room-302', name: '302', type: 'room', x: 15.3, y: 47.2, width: 5, height: 10 },
+        { id: 'room-303', name: '303', type: 'room', x: 20, y: 47.5, width: 5, height: 10 },
+        { id: 'room-316', name: '316', type: 'room', x: 25, y: 47.5, width: 6.8, height: 10 },
+        { id: 'room-317', name: '317', type: 'room', x: 32, y: 47.5, width: 6.6, height: 10 },
+        { id: 'room-318', name: '318', type: 'room', x: 38.7, y: 47.5, width: 9, height: 10 },
+        { id: 'room-319', name: '319', type: 'room', x: 51.2, y: 46.5, width: 6.4, height: 10 },
+        { id: 'room-320', name: '320', type: 'room', x: 57.6, y: 46.5, width: 5.6, height: 10 },
+        { id: 'room-321', name: '321', type: 'room', x: 63, y: 46.5, width: 5, height: 10 },
+        { id: 'room-322', name: '322', type: 'room', x: 68, y: 46.5, width: 4.8, height: 10 },
+        { id: 'room-323', name: '323', type: 'room', x: 72.7, y: 46.5, width: 5.3, height: 10 },
+        { id: 'room-324', name: '324', type: 'room', x: 78, y: 34.5, width: 12, height: 17 },
+        { id: 'room-325', name: '325', type: 'room', x: 78, y: 51.5, width: 12, height: 21.8 },
+
+
         
         // Center corridor
-        { id: 'hall-main-3', name: 'Main Corridor', type: 'hall', x: 22, y: 42, width: 50, height: 6 },
-        
+        { id: 'hall-main-3a', name: 'Main Hall', type: 'hall', x: 15.3, y: 40, width: 62.5, height: 6.7 },
+        { id: 'hall-main-3b', name: '', type: 'hall', x: 15.3, y: 33, width: 3.4, height: 7 },
+        { id: 'hall-main-3c', name: '', type: 'hall', x: 47.5, y: 46.5, width: 3.8, height: 10 },
+        { id: 'hall-side-3', name: 'Side Hall', type: 'hall', x: 47.5, y: 56.5, width: 30.4, height: 8.5 },
+
         // Office spaces
-        { id: 'room-304', name: 'Open Office', type: 'room', x: 25, y: 10, width: 25, height: 28 },
-        { id: 'room-305', name: 'Break Room', type: 'room', x: 25, y: 52, width: 12, height: 20 },
-        { id: 'room-306', name: 'Supply Room', type: 'room', x: 40, y: 52, width: 10, height: 15 },
-        
-        // Right wing
-        { id: 'room-307', name: 'Training Room', type: 'room', x: 55, y: 10, width: 20, height: 25 },
-        { id: 'room-308', name: 'IT Office', type: 'room', x: 55, y: 55, width: 15, height: 18 },
-        { id: 'room-309', name: 'Server Room', type: 'room', x: 72, y: 55, width: 10, height: 15 },
-        { id: 'room-310', name: 'Reception', type: 'room', x: 78, y: 10, width: 15, height: 20 },
-        
+        { id: 'room-304', name: '304', type: 'room', x: 18.7, y: 33, width: 4.5, height: 7 },
+        { id: 'room-305', name: '305', type: 'room', x: 23.2, y: 33, width: 3, height: 7 },
+        { id: 'room-306', name: '306', type: 'room', x: 26.4, y: 31, width: 8.2, height: 9 },
+        { id: 'room-307', name: '307', type: 'room', x: 34.5, y: 31, width: 5, height: 9 },
+        { id: 'room-308', name: '308', type: 'room', x: 39.5, y: 31, width: 4.4, height: 9 },
+        { id: 'room-309', name: '309', type: 'room', x: 43.8, y: 31, width: 4.2, height: 9 },
+        { id: 'room-310', name: '310', type: 'room', x: 48, y: 31, width: 7.5, height: 9 },
+        { id: 'room-311', name: '311', type: 'room', x: 55.5, y: 31, width: 4, height: 9 },
+        { id: 'room-312', name: '312', type: 'room', x: 59.5, y: 31, width: 5, height: 9 },
+        { id: 'room-313', name: '313', type: 'room', x: 64.5, y: 31, width: 4.8, height: 9 },
+        { id: 'room-314', name: '314', type: 'room', x: 69.3, y: 31, width: 4, height: 9 },
+        { id: 'room-315', name: '315', type: 'room', x: 73.3, y: 31, width: 4.4, height: 9 },
+
+                
         // Stairwells
-        { id: 'stair-A-3', name: 'Stairwell A', type: 'stairwell', stairwellGroup: 'A', x: 20, y: 38, width: 5, height: 10 },
-        { id: 'stair-B-3', name: 'Stairwell B', type: 'stairwell', stairwellGroup: 'B', x: 75, y: 35, width: 5, height: 10 },
+        { id: 'stair-A-3', name: 'Stairwell A', type: 'stairwell', stairwellGroup: 'A', x: 15, y: 25, width: 11.3, height: 8 },
+        { id: 'stair-B-3', name: 'Stairwell B', type: 'stairwell', stairwellGroup: 'B', x: 78, y: 25, width: 12, height: 9 },
     ],
 };
 
@@ -497,17 +521,77 @@ export default function FloorMap({
                             ]} numberOfLines={1} adjustsFontSizeToFit>
                                 {room.name}
                             </Text>
-                        </Pressable>
-                    );
-                })}
+                            <Text style={styles.placeholderSubtext}>
+                                Add {currentFloor === 2 ? 'secondFloorView.png' : 'thirdFloorView.png'} to assets/
+                            </Text>
+                        </View>
+                    )}
 
-                {/* Escape Path Placeholder - TODO: Implement actual path rendering */}
-                {emergencyMode && escapePath.length > 0 && (
-                    <View style={styles.escapePathOverlay} pointerEvents="none">
-                        <Text style={styles.escapePathText}>Escape route will be displayed here</Text>
-                    </View>
-                )}
-            </View>
+                    {/* 2D Grid Overlay */}
+                    {renderGrid()}
+
+                    {/* Clickable room overlays */}
+                    {currentRooms.map(room => {
+                        const isHighlighted = highlightedRooms.includes(room.id);
+                        const isStairSelected = isStairwellSelected(room);
+                        const isEmergency = isEmergencyRoom(room);
+                        return (
+                            <Pressable
+                                key={room.id}
+                                style={({ pressed }) => [
+                                    styles.roomOverlay,
+                                    room.type === 'stairwell' && styles.stairwellOverlay,
+                                    room.type === 'hall' && styles.hallOverlay,
+                                    isHighlighted && styles.roomHighlighted,
+                                    isStairSelected && styles.stairwellSelected,
+                                    isEmergency && styles.roomEmergency,
+                                    emergencyMode && styles.roomDisabled,
+                                    getRoomStyle(room),
+                                    pressed && !emergencyMode && styles.roomPressed,
+                                    room.id === 'room-10' && { transform: [{ rotate: '348deg' }] },
+                                    room.id === 'room-9' && { transform: [{ rotate: '348deg' }] },
+                                    room.id === 'hall-center' && { transform: [{ rotate: '348deg' }] },
+                                    room.id === 'hall-main-3a' && { /* add transform if needed */ },
+                                    room.id === 'hall-main-3b' && { /* add transform if needed */ },
+                                    room.id === 'hall-main-3c' && { /* add transform if needed */ },
+                                    room.id === 'hall-side-3' && { /* add transform if needed */ },
+                                    room.id === 'room-16' && { transform: [{ rotate: '40deg' }] },
+                                    room.id === 'room-17' && { transform: [{ rotate: '40deg' }] },
+                                    room.id === 'room-18' && { transform: [{ rotate: '40deg' }] },
+                                    room.id === 'room-19' && { transform: [{ rotate: '40deg' }] },
+                                    room.id === 'room-20' && { transform: [{ rotate: '40deg' }] },
+                                    room.id === 'room-21' && { transform: [{ rotate: '40deg' }] },
+                                    room.id === 'stair-C-1' && { transform: [{ rotate: '356deg' }] },
+                                    room.id === 'room-24' && { transform: [{ rotate: '40deg' }] },
+                                    room.id === 'hall-right' && { transform: [{ rotate: '40deg' }] },
+                                    Platform.OS === 'web' && !emergencyMode && { cursor: 'pointer' } as any,
+                                    Platform.OS === 'web' && emergencyMode && { cursor: 'not-allowed' } as any,
+                                ]}
+                                onPress={() => handleRoomPress(room)}
+                                disabled={emergencyMode}
+                            >
+                                <Text style={[
+                                    styles.roomLabel,
+                                    room.type === 'stairwell' && styles.stairwellLabel,
+                                    room.type === 'hall' && styles.hallLabel,
+                                    isHighlighted && styles.roomLabelHighlighted,
+                                    isStairSelected && styles.stairwellLabelSelected,
+                                    isEmergency && styles.roomLabelEmergency,
+                                ]} numberOfLines={1} adjustsFontSizeToFit>
+                                    {room.name}
+                                </Text>
+                            </Pressable>
+                        );
+                    })}
+
+                    {/* Escape Path Placeholder - TODO: Implement actual path rendering */}
+                    {emergencyMode && escapePath.length > 0 && (
+                        <View style={styles.escapePathOverlay} pointerEvents="none">
+                            <Text style={styles.escapePathText}>Escape route will be displayed here</Text>
+                        </View>
+                    )}
+                </View>
+            </ScrollView>
         </View>
     );
 }
